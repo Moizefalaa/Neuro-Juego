@@ -2,7 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a2332">
+<meta name="description" content="Juegos de estimulación cognitiva para adolescentes: memoria, razonamiento, velocidad, lenguaje, visoespacial y cognición social.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>NeuroJuego - Estimulación cognitiva</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -45,6 +53,38 @@
   .c-vel { background: linear-gradient(135deg, #f4511e, #fb8c00); }
   .c-ver { background: linear-gradient(135deg, #1e88e5, #64b5f6); }
   .c-vis { background: linear-gradient(135deg, #d81b60, #f06292); }
+  .c-soc { background: linear-gradient(135deg, #00838f, #4dd0e1); }
+
+  .game-card.pendiente { background: linear-gradient(135deg, #8d6e00, #d4e157); color: #222000; animation: latido 1.6s infinite; }
+  @keyframes latido { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+
+  .celda-emoji.sel { border: 3px solid #d4e157; transform: scale(1.06); }
+  .op-emoji .etiqueta-emocion { display: block; font-size: 0.72rem; font-family: "Segoe UI", sans-serif; color: #9fb4d8; margin-top: 2px; }
+
+  .tarjeta-historia {
+    background: #2c3a57; border-radius: 16px; padding: 18px 22px; font-size: 1.08rem;
+    line-height: 1.7; max-width: 520px; user-select: text;
+  }
+
+  .svg-trail { background: #2c3a57; border-radius: 16px; max-width: 100%; touch-action: manipulation; }
+  .nodo { cursor: pointer; }
+  .nodo circle { fill: #33415c; stroke: #4a5a80; stroke-width: 3; }
+  .nodo text { fill: #eef2f7; font-weight: 700; font-size: 19px; text-anchor: middle; pointer-events: none; }
+  .nodo.hecho circle { fill: #3d6b40; stroke: #81c784; }
+  .nodo.error circle { stroke: #ef5350; animation: sacudir 0.3s; }
+  .nodo.siguiente circle { stroke: #ffb300; animation: pulsoN 1s infinite; }
+  @keyframes pulsoN { 50% { stroke-width: 7; } }
+
+  .zona-torre { display: flex; gap: 16px; justify-content: center; align-items: flex-end; }
+  .poste { position: relative; width: 118px; height: 185px; cursor: pointer; border-radius: 12px; }
+  .poste:hover { background: rgba(44,58,87,0.5); }
+  .poste.sel { background: #2c3a57; outline: 2px dashed #ffb300; }
+  .palo { position: absolute; bottom: 12px; left: 50%; margin-left: -4px; width: 8px; height: 130px; background: #4a5a80; border-radius: 4px; }
+  .base-poste { position: absolute; bottom: 4px; left: 4px; right: 4px; height: 10px; background: #4a5a80; border-radius: 6px; }
+  .discos-torre { position: absolute; bottom: 14px; left: 0; right: 0; display: flex; flex-direction: column-reverse; align-items: center; gap: 3px; }
+  .disco { height: 20px; border-radius: 999px; border: 2px solid rgba(0,0,0,0.3); transition: transform 0.15s; }
+  .disco.flotando { transform: translateY(-10px); box-shadow: 0 8px 14px rgba(0,0,0,0.4); }
+  .hud-torre { display: flex; gap: 16px; font-size: 0.95rem; color: #9fb4d8; flex-wrap: wrap; justify-content: center; }
 
   .btn {
     border: none; border-radius: 14px; padding: 14px 28px; font-size: 1.05rem; font-weight: 700;
@@ -160,6 +200,7 @@
   .b-vel { background: linear-gradient(90deg, #f4511e, #fb8c00); }
   .b-ver { background: linear-gradient(90deg, #1e88e5, #64b5f6); }
   .b-vis { background: linear-gradient(90deg, #d81b60, #f06292); }
+  .b-soc { background: linear-gradient(90deg, #00838f, #4dd0e1); }
 
   .tarjeta-panel { background: #2c3a57; border-radius: 18px; padding: 18px 22px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
   .tarjeta-panel h3 { font-size: 1.05rem; color: #ffb300; }
@@ -183,6 +224,7 @@
   .input-linea { display: flex; gap: 8px; width: 100%; max-width: 380px; }
   .input-linea input { flex: 1; border-radius: 12px; border: 2px solid #4a5a80; background: #1e293f; color: #eef2f7; padding: 12px 14px; font-size: 1rem; outline: none; }
   .input-linea input:focus { border-color: #ffb300; }
+  .sel-panel { background: #1e293f; color: #eef2f7; border: 2px solid #4a5a80; border-radius: 10px; padding: 8px 12px; font-size: 0.9rem; outline: none; cursor: pointer; }
 
   .feedback { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-120px);
     padding: 14px 30px; border-radius: 999px; font-size: 1.15rem; font-weight: 700;
@@ -195,6 +237,113 @@
   .navegacion { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   .pie { padding: 14px; color: #6d7f9e; font-size: 0.78rem; text-align: center; }
   .vacio { color: #9fb4d8; font-size: 0.95rem; padding: 8px 0; }
+
+  #informe-print { display: none; }
+
+  body.accesible { font-size: 1.12rem; }
+  body.accesible .instruccion { font-size: 1.35rem; }
+  body.accesible .btn-ver { font-size: 1.3rem; padding: 20px 26px; min-width: 280px; }
+  body.accesible .palabra-ver { font-size: 2.8rem; }
+  body.accesible .game-card { font-size: 1.15rem; }
+  body.accesible .status, body.accesible #status-juego { font-size: 1.3rem; }
+  body.accesible .nivel { font-size: 0.95rem !important; }
+  body.accesible .tecla { height: 76px; font-size: 2rem; }
+  body.accesible .celda-mem { width: 108px; height: 108px; }
+  body.accesible .grid-mem { grid-template-columns: repeat(3, 108px); }
+  body.accesible .op-emoji { width: 100px; height: 100px; font-size: 2.6rem; }
+  body.accesible .celda-emoji { width: 96px; height: 96px; font-size: 3rem; }
+  body.accesible .nodo text { font-size: 24px; }
+
+  body.contraste { background: #000; color: #fff; }
+  body.contraste .instruccion, body.contraste .tarjeta-panel, body.contraste .tarjeta-historia,
+  body.contraste .caja-resultado, body.contraste .game-card, body.contraste .stars,
+  body.contraste .chip, body.contraste .sel-panel,
+  body.contraste .celda-mem, body.contraste .tecla, body.contraste .celda-emoji,
+  body.contraste .op-emoji, body.contraste .opcion, body.contraste .figura-raz,
+  body.contraste .btn-ver, body.contraste .palabra-color, body.contraste .objetivo-vel,
+  body.contraste .celda-vel, body.contraste .svg-trail, body.contraste .poste,
+  body.contraste .pac-card, body.contraste input, body.contraste .circulo-color {
+    background: #000 !important; color: #ffe900 !important;
+    border-color: #ffe900 !important;
+  }
+  body.contraste .game-card { color: #ffe900 !important; }
+  body.contraste .game-card .icon { filter: none; }
+  body.contraste .btn { background: #ffe900 !important; color: #000 !important; }
+  body.contraste .btn.secundario { background: #000 !important; color: #ffe900 !important; border: 2px solid #ffe900; }
+  body.contraste .btn.peligro { background: #ff4040 !important; color: #000 !important; }
+  body.contraste .seccion-titulo, body.contraste .puzzle-titulo, body.contraste .status,
+  body.contraste #status-juego, body.contraste .pie, body.contraste .pac-info,
+  body.contraste .fd-dato, body.contraste .btn-audio, body.contraste .vacio,
+  body.contraste .etiqueta-emocion, body.contraste .hud-torre, body.contraste .tabla th {
+    color: #fff !important;
+  }
+  body.contraste header { background: #000; border-bottom: 2px solid #ffe900; }
+  body.contraste .nodo circle { fill: #000; stroke: #ffe900; }
+  body.contraste .nodo text { fill: #ffe900; }
+  body.contraste .nodo.hecho circle { fill: #ffe900; } body.contraste .nodo.hecho text { fill: #000; }
+  body.contraste .pista-tiempo { background: #333; }
+  body.contraste .pista-relleno { background: #ffe900; }
+  body.contraste .disco { border-color: #fff !important; }
+  body.contraste .palo, body.contraste .base-poste { background: #ffe900; }
+  body.contraste .circulo-color { border-color: #fff !important; }
+
+  .botones-accesibles { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+
+  .fila-meta-mascota { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+  @media (max-width: 560px) { .fila-meta-mascota { grid-template-columns: 1fr; } }
+  .tarjeta-meta { background: #2c3a57; border-radius: 18px; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .meta-cab { font-weight: 700; font-size: 0.95rem; color: #ffb300; }
+  .meta-pista { position: relative; height: 30px; background: #1e293f; border-radius: 999px; overflow: hidden; }
+  .meta-relleno { height: 100%; background: linear-gradient(90deg, #fb8c00, #ffb300); border-radius: 999px; transition: width 0.5s; }
+  .meta-texto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.88rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+  .meta-sub { font-size: 0.8rem; color: #9fb4d8; }
+
+  .tarjeta-mascota { background: linear-gradient(135deg, #372f5e, #4a3f7a); border-radius: 18px; padding: 14px 20px; display: flex; align-items: center; gap: 16px; }
+  .mascota-grande { font-size: 3.4rem; animation: flotar 3s ease-in-out infinite; }
+  @keyframes flotar { 50% { transform: translateY(-8px); } }
+  .mascota-info { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .mascota-nombre { font-weight: 700; font-size: 1rem; }
+  .mascota-etapa { font-size: 0.8rem; color: #c5b3ea; }
+  .mascota-barra { height: 10px; background: #1e293f; border-radius: 999px; overflow: hidden; }
+  .mascota-barra > div { height: 100%; background: linear-gradient(90deg, #7c4dff, #b388ff); border-radius: 999px; }
+  .mascota-pista { font-size: 0.75rem; color: #9fb4d8; }
+  .btn-mascota { background: rgba(0,0,0,0.3); border: none; color: #c5b3ea; border-radius: 10px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; }
+  .btn-acces { background: #33415c; border: 2px solid #4a5a80; color: #eef2f7; border-radius: 999px; padding: 8px 18px; font-size: 0.9rem; cursor: pointer; transition: all 0.15s; }
+  .btn-acces:hover { border-color: #ffb300; }
+  .btn-acces.activo { background: #ffb300; color: #25210c; border-color: #ffb300; font-weight: 700; }
+
+  .zona-demo {
+    background: #2c3a57; border-radius: 16px; padding: 20px; max-width: 560px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .demo-titulo { font-weight: 700; font-size: 1.15rem; color: #ffb300; }
+  .demo-zona { min-height: 110px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; }
+  .demo-mensaje { font-size: 0.95rem; color: #9fb4d8; min-height: 1.4em; text-align: center; }
+  .demo-item { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; transition: all 0.2s; }
+  .demo-item .demo-circulo { width: 64px; height: 64px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: #33415c; border: 3px solid #4a5a80; }
+  .demo-item .demo-texto { font-size: 0.82rem; color: #9fb4d8; }
+  .demo-item.destello .demo-circulo { background: #ffb300; border-color: #ffe082; transform: scale(1.12); }
+  .demo-item.correcto .demo-circulo { background: #43a047; border-color: #81c784; }
+  .demo-item.incorrecto .demo-circulo { background: #c62828; border-color: #ef9a9a; }
+  .demo-mano { font-size: 1.8rem; animation: apuntar 0.9s infinite; }
+  @keyframes apuntar { 50% { transform: translateY(6px); } }
+  @media print {
+    body * { visibility: hidden; }
+    #informe-print, #informe-print * { visibility: visible; }
+    #informe-print {
+      display: block; position: absolute; top: 0; left: 0; width: 100%;
+      background: #fff !important; color: #111 !important;
+      font-family: "Segoe UI", system-ui, sans-serif; padding: 20px;
+    }
+    #informe-print h1 { font-size: 1.4rem; border-bottom: 3px solid #111; padding-bottom: 6px; }
+    #informe-print h2 { font-size: 1.05rem; margin: 16px 0 6px; border-bottom: 1px solid #999; padding-bottom: 3px; }
+    .inf-tabla { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 6px 0; }
+    .inf-tabla th, .inf-tabla td { border: 1px solid #666; padding: 5px 8px; text-align: left; }
+    .inf-tabla th { background: #eee; }
+    .inf-cab { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 0.9rem; margin: 10px 0; }
+    .inf-nota { font-size: 0.85rem; background: #f2f2f2; border-left: 4px solid #666; padding: 8px 12px; margin: 8px 0; line-height: 1.5; }
+    .inf-dest { font-weight: 700; }
+  }
 </style>
 </head>
 <body>
@@ -209,10 +358,15 @@
 
   <section id="scr-inicio" class="screen active">
     <div class="instruccion">¡Hola! Elige un juego para entrenar tu mente 🚀</div>
+    <div class="botones-accesibles">
+      <button class="btn-acces" id="btn-texto" onclick="toggleAccesible('grande')">🔎 Texto grande</button>
+      <button class="btn-acces" id="btn-contraste" onclick="toggleAccesible('contraste')">🌗 Alto contraste</button>
+    </div>
     <div id="menu" style="display:flex;flex-direction:column;gap:18px;width:100%"></div>
     <div class="navegacion">
       <button class="btn secundario" onclick="renderPerfil();mostrarPantalla('scr-perfil')">📊 Ver mi progreso</button>
       <button class="btn secundario" onclick="irATerapeuta()">🧑‍⚕️ Panel del terapeuta</button>
+      <button class="btn" onclick="iniciarTest()">🎯 Test de nivel inicial</button>
     </div>
   </section>
 
@@ -233,8 +387,7 @@
       <div class="navegacion">
         <button class="btn" onclick="juegoActual.empezar()">🔁 Jugar otra vez</button>
         <button class="btn secundario" onclick="volverMenu()">🏠 Menú</button>
-      </div>
-    </div>
+      </div>    </div>
   </section>
 
   <section id="scr-perfil" class="screen">
@@ -269,6 +422,7 @@
 </main>
 <div class="pie">NeuroJuego · Herramienta de estimulación cognitiva · Los niveles se ajustan automáticamente al rendimiento</div>
 <div class="feedback" id="feedback"></div>
+<div id="informe-print"></div>
 
 <script>
 const DOMINIOS = {
@@ -276,7 +430,8 @@ const DOMINIOS = {
   raz: { nombre: "Razonamiento fluido", icono: "🧩" },
   vel: { nombre: "Velocidad de procesamiento", icono: "⚡" },
   ver: { nombre: "Comprensión verbal", icono: "💬" },
-  vis: { nombre: "Visoespacial", icono: "🔄" }
+  vis: { nombre: "Visoespacial", icono: "🔄" },
+  soc: { nombre: "Cognición social", icono: "💗" }
 };
 
 const JUEGOS = {
@@ -286,29 +441,47 @@ const JUEGOS = {
     instruccion: "Memoriza los números y luego tócalos en orden AL REVÉS, del último al primero." },
   mem3: { dom: "mem", nombre: "¿Qué falta?", icono: "❓",
     instruccion: "Memoriza los dibujos. Uno desaparecerá... ¿cuál es el que falta?" },
+  mem4: { dom: "mem", nombre: "Aprende para después", icono: "⏳",
+    instruccion: "Aprende bien estas figuras: más tarde, cuando menos lo esperes, te vamos a preguntar por ellas." },
   raz1: { dom: "raz", nombre: "¿Qué viene después?", icono: "🧩",
     instruccion: "Observa el patrón de las figuras y elige la que sigue." },
   raz2: { dom: "raz", nombre: "Analogías visuales", icono: "⚖️",
     instruccion: "La primera figura cambia de la misma forma que el ejemplo. ¿Cómo queda la última?" },
+  raz3: { dom: "raz", nombre: "La torre", icono: "🗼",
+    instruccion: "Mueve toda la torre al poste de la DERECHA. Toca un poste para levantar la pieza de arriba y otro para soltarla. Nunca una grande sobre una pequeña." },
   vel1: { dom: "vel", nombre: "Búsqueda rápida", icono: "⚡",
     instruccion: "Encuentra todos los dibujos iguales al de arriba, sin prisa pero sin pausa." },
   vel2: { dom: "vel", nombre: "Toca el color", icono: "🎨",
     instruccion: "Lee el nombre del color y toca el círculo de ese color antes de que se acabe la barra." },
+  vel3: { dom: "vel", nombre: "Colores tramposos", icono: "🌀",
+    instruccion: "¡Cuidado! La palabra dice un color pero está ESCRITA en otro. Toca el color de las LETRAS, no lo que dice la palabra." },
+  vel4: { dom: "vel", nombre: "Sigue el camino", icono: "🧭",
+    instruccion: "Toca los círculos en orden: 1, 2, 3... ¡Y cuando aparezcan letras, alterna: 1, A, 2, B...!" },
   ver1: { dom: "ver", nombre: "Palabras conectadas", icono: "💬",
     instruccion: "Elige el grupo al que pertenece la palabra." },
   ver2: { dom: "ver", nombre: "El intruso", icono: "🔍",
     instruccion: "Tres palabras van juntas y una no encaja. Toca la palabra intrusa." },
   ver3: { dom: "ver", nombre: "Palabras parecidas", icono: "🔗",
     instruccion: "Elige la palabra que significa lo mismo (su sinónimo)." },
+  ver4: { dom: "ver", nombre: "La historia", icono: "📖",
+    instruccion: "Lee o escucha la historia con atención y responde las preguntas. Puedes volver a ver la historia cuando quieras." },
   vis1: { dom: "vis", nombre: "Gira la figura", icono: "🔄",
     instruccion: "Encuentra la figura que es la MISMA, solo que girada. ¡Cuidado con las reflejadas!" },
   vis2: { dom: "vis", nombre: "Bloques como el modelo", icono: "🧱",
-    instruccion: "Mira el modelo y construye exactamente el mismo dibujo tocando los bloques. Pulsa Comprobar al terminar." }
+    instruccion: "Mira el modelo y construye exactamente el mismo dibujo tocando los bloques. Pulsa Comprobar al terminar." },
+  soc1: { dom: "soc", nombre: "¿Cómo se siente?", icono: "💗",
+    instruccion: "Lee o escucha la situación y elige la cara que muestra cómo se siente la persona." }
 };
 
 const NIVEL_MAX = 10;
 let GEN = 0;
+let MODO_TEST = null;
 let juegoActual = null;
+
+function multTiempo() {
+  const cfg = pac().config || {};
+  return cfg.tiempo === "relajado" ? 1.6 : cfg.tiempo === "intensivo" ? 0.75 : 1;
+}
 
 function cargarStore() {
   let s = null;
@@ -317,15 +490,68 @@ function cargarStore() {
     s = { actual: "p1", pacientes: { p1: { id: "p1", nombre: "Paciente 1", perfil: {}, sesiones: [] } } };
     localStorage.setItem("nj_store", JSON.stringify(s));
   }
+  if (s.pendiente && Date.now() - (s.pendiente.creado || 0) > 6 * 3600 * 1000) delete s.pendiente;
   return s;
 }
 let STORE = cargarStore();
 const guardar = () => localStorage.setItem("nj_store", JSON.stringify(STORE));
+
+const ACC = JSON.parse(localStorage.getItem("nj_accesibilidad") || '{"grande":false,"contraste":false}');
+function aplicarAccesibilidad() {
+  document.body.classList.toggle("accesible", !!ACC.grande);
+  document.body.classList.toggle("contraste", !!ACC.contraste);
+  localStorage.setItem("nj_accesibilidad", JSON.stringify(ACC));
+  const bt = document.getElementById("btn-texto");
+  const bc = document.getElementById("btn-contraste");
+  if (bt) bt.classList.toggle("activo", !!ACC.grande);
+  if (bc) bc.classList.toggle("activo", !!ACC.contraste);
+}
+function toggleAccesible(cual) {
+  ACC[cual] = !ACC[cual];
+  aplicarAccesibilidad();
+}
+aplicarAccesibilidad();
 const pac = () => STORE.pacientes[STORE.actual];
 function perfilJuego(id) { const p = pac(); p.perfil[id] = p.perfil[id] || { nivel: 1, estrellas: 0 }; return p.perfil[id]; }
 const nivelDe = (id) => perfilJuego(id).nivel;
 function estrellasPaciente() {
-  let t = 0; for (const j in JUEGOS) t += perfilJuego(j).estrellas || 0; return t;
+  let t = 0; for (const j in JUEGOS) t += perfilJuego(j).estrellas || 0;
+  return t + (pac().bonus || 0);
+}
+function inicioSemana() {
+  const d = new Date();
+  const dia = (d.getDay() + 6) % 7;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - dia).getTime();
+}
+function sesionesSemana() {
+  const t0 = inicioSemana();
+  return pac().sesiones.filter(s => s.f >= t0).length;
+}
+function metaSemanal() { return (pac().config || {}).metaSemanal || 6; }
+function checkMetaSemana() {
+  const p = pac();
+  const semana = inicioSemana();
+  if (sesionesSemana() >= metaSemanal() && (p.config || {}).semanaBonus !== semana) {
+    p.config = Object.assign({}, p.config, { semanaBonus: semana });
+    p.bonus = (p.bonus || 0) + 5;
+    guardar();
+    sonidoSubida();
+    mostrarFeedback("🎯 ¡Meta semanal completada! +5 ⭐ de bonus", "subida");
+  }
+}
+
+const ETAPAS_MASCOTA = [
+  { min: 0, e: "🥚", n: "Huevo misterioso" },
+  { min: 10, e: "🐣", n: "Rompiendo el cascarón" },
+  { min: 25, e: "🐥", n: "Bebé Neuronio" },
+  { min: 50, e: "🦖", n: "Joven Neuronio" },
+  { min: 100, e: "🐲", n: "Neuronio guardián" },
+  { min: 200, e: "🐉", n: "¡Neuronio legendario!" }
+];
+function etapaMascota(est) {
+  let et = ETAPAS_MASCOTA[0];
+  for (const t of ETAPAS_MASCOTA) if (est >= t.min) et = t;
+  return et;
 }
 function refrescarEstrellas() {
   document.getElementById("estrellas-totales").textContent = "⭐ " + estrellasPaciente();
@@ -338,6 +564,7 @@ function mostrarPantalla(id) {
 }
 function volverMenu() {
   GEN++; speechSynthesis.cancel();
+  MODO_TEST = null;
   if (juegoActual && juegoActual.limpiar) juegoActual.limpiar();
   construirMenu(); mostrarPantalla("scr-inicio");
 }
@@ -345,6 +572,59 @@ function volverMenu() {
 function construirMenu() {
   const menu = document.getElementById("menu");
   menu.innerHTML = "";
+  if (STORE.pendiente) {
+    const listo = Date.now() >= STORE.pendiente.listo;
+    const b = document.createElement("button");
+    b.className = "game-card " + (listo ? "pendiente" : "c-mem");
+    if (listo) {
+      b.innerHTML = `<span class="icon">⏰</span><span>¿Recuerdas las figuras?</span><span class="nivel">¡Toca aquí!</span>`;
+      b.onclick = iniciarDiferido;
+    } else {
+      const mins = Math.max(1, Math.ceil((STORE.pendiente.listo - Date.now()) / 60000));
+      b.innerHTML = `<span class="icon">⏳</span><span>Recuerdo diferido en camino...</span><span class="nivel">Listo en ~${mins} min · juega otros juegos</span>`;
+      b.disabled = true; b.style.opacity = 0.7; b.style.cursor = "default";
+    }
+    menu.appendChild(b);
+  }
+  const fila = document.createElement("div");
+  fila.className = "fila-meta-mascota";
+
+  const hechas = sesionesSemana(), meta = metaSemanal();
+  const pctMeta = Math.min(100, Math.round(hechas / meta * 100));
+  const metaCard = document.createElement("div");
+  metaCard.className = "tarjeta-meta";
+  metaCard.innerHTML = `
+    <div class="meta-cab">🎯 Meta de esta semana</div>
+    <div class="meta-pista">
+      <div class="meta-relleno" style="width:${pctMeta}%"></div>
+      <div class="meta-texto">${hechas} / ${meta} sesiones ${pctMeta >= 100 ? "✓ ¡completada!" : ""}</div>
+    </div>
+    <div class="meta-sub">${pctMeta >= 100 ? "¡Increíble! Sigue jugando para ganar más estrellas ⭐" : "Completa la meta y gana +5 ⭐ de bonus"}</div>`;
+  fila.appendChild(metaCard);
+
+  const est = estrellasPaciente();
+  const et = etapaMascota(est);
+  const idx = ETAPAS_MASCOTA.indexOf(et);
+  const next = ETAPAS_MASCOTA[idx + 1];
+  const pctNext = next ? Math.min(100, Math.round((est - et.min) / (next.min - et.min) * 100)) : 100;
+  const mascCard = document.createElement("div");
+  mascCard.className = "tarjeta-mascota";
+  mascCard.innerHTML = `
+    <div class="mascota-grande">${et.e}</div>
+    <div class="mascota-info">
+      <div class="mascota-nombre">${pac().mascotaNombre || "Neuronio"} <button class="btn-mascota">✏️</button></div>
+      <div class="mascota-etapa">${et.n} · ⭐ ${est}</div>
+      ${next
+        ? `<div class="mascota-barra"><div style="width:${pctNext}%"></div></div>
+           <div class="mascota-pista">Faltan ${next.min - est} ⭐ para evolucionar a ${next.e}</div>`
+        : `<div class="mascota-pista">¡Nivel máximo alcanzado! 🎉</div>`}
+    </div>`;
+  mascCard.querySelector(".btn-mascota").onclick = () => {
+    const n = prompt("¿Cómo se llama tu mascota?", pac().mascotaNombre || "Neuronio");
+    if (n && n.trim()) { pac().mascotaNombre = n.trim().slice(0, 15); guardar(); construirMenu(); }
+  };
+  fila.appendChild(mascCard);
+  menu.appendChild(fila);
   for (const [dom, d] of Object.entries(DOMINIOS)) {
     const seccion = document.createElement("div");
     seccion.className = "seccion-menu";
@@ -370,20 +650,113 @@ function construirMenu() {
   refrescarEstrellas();
 }
 
-function abrirJuego(id) {
+function abrirJuego(id, sinDemo) {
   const g = JUEGOS[id];
   document.getElementById("instruccion-juego").textContent = g.instruccion;
   juegoActual = GAMES[id]();
   mostrarPantalla("scr-juego");
+  if (DEMOS[id] && !sinDemo) montarDemo(id);
+  else juegoActual.empezar();
+}
+
+function montarDemo(id) {
+  GEN++;
+  const motor = juegoActual;
+  const zona = document.getElementById("zona-juego");
+  document.getElementById("racha").innerHTML = "";
+  document.getElementById("status-juego").textContent = "Primero mira cómo se juega 👀";
+  zona.innerHTML = "";
+  const caja = document.createElement("div");
+  caja.className = "zona-demo";
+  const titulo = document.createElement("div");
+  titulo.className = "demo-titulo";
+  titulo.textContent = "Así se juega:";
+  const escenario = document.createElement("div");
+  escenario.className = "demo-zona";
+  const mensaje = document.createElement("div");
+  mensaje.className = "demo-mensaje";
+  const botones = document.createElement("div");
+  botones.className = "navegacion";
+  const bSaltar = document.createElement("button");
+  bSaltar.className = "btn secundario";
+  bSaltar.textContent = "Ya sé jugar ➡";
+  bSaltar.onclick = () => { juegoActual.empezar(); };
+  const bRepetir = document.createElement("button");
+  bRepetir.className = "btn-audio";
+  bRepetir.textContent = "🔁 Repetir";
+  bRepetir.onclick = () => montarDemo(id);
+  botones.append(bRepetir, bSaltar);
+  caja.append(titulo, escenario, mensaje, botones);
+  zona.appendChild(caja);
+  DEMOS[id](escenario, mensaje);
+}
+
+function iniciarDiferido() {
+  const items = STORE.pendiente.items;
+  delete STORE.pendiente; guardar();
+  document.getElementById("instruccion-juego").textContent =
+    "Toca SOLO las figuras que aprendiste antes. Cuando estés seguro, pulsa Comprobar.";
+  juegoActual = GAMES.mem4d(items);
+  mostrarPantalla("scr-juego");
   juegoActual.empezar();
 }
 
-function leerInstruccion() {
+setInterval(() => {
+  const activo = document.getElementById("scr-inicio").classList.contains("active");
+  if (activo && STORE.pendiente) construirMenu();
+}, 20000);
+
+function iniciarTest() {
+  const ORDEN = ["mem1", "raz1", "vel1", "ver1", "vis1", "soc1"];
+  const resultados = [];
+  let i = 0;
+  MODO_TEST = {
+    escaleraTest: true,
+    alTerminar(nivelFinal) {
+      resultados.push({ j: ORDEN[i], n: nivelFinal });
+      i++;
+      if (i < ORDEN.length) setTimeout(siguienteJuego, 1500);
+      else terminarTest();
+    }
+  };
+  function siguienteJuego() {
+    const id = ORDEN[i];
+    perfilJuego(id).nivel = 2;
+    mostrarFeedback(`Prueba ${i + 1} de ${ORDEN.length}: ${JUEGOS[id].nombre}`, "subida");
+    abrirJuego(id, true);
+  }
+  function terminarTest() {
+    MODO_TEST = null;
+    resultados.forEach(r => {
+      const dom = JUEGOS[r.j].dom;
+      Object.keys(JUEGOS).filter(k => JUEGOS[k].dom === dom).forEach(k => { perfilJuego(k).nivel = r.n; });
+    });
+    guardar();
+    const detalle = resultados.map(r =>
+      `${DOMINIOS[JUEGOS[r.j].dom].icono} ${DOMINIOS[JUEGOS[r.j].dom].nombre}: nivel ${r.n}`).join(" · ");
+    document.getElementById("res-titulo").textContent = "🎯 Test completado";
+    document.getElementById("res-detalle").textContent = "Niveles iniciales asignados — " + detalle;
+    document.getElementById("res-emoji").textContent = "🎯";
+    juegoActual = { empezar: volverMenu, limpiar: null };
+construirMenu();
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+    mostrarPantalla("scr-resultado");
+  }
+  siguienteJuego();
+}
+
+function leerTexto(texto) {
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(document.getElementById("instruccion-juego").textContent);
+  const u = new SpeechSynthesisUtterance(texto);
   u.lang = "es-ES"; u.rate = 0.92;
   speechSynthesis.speak(u);
 }
+function leerInstruccion() { leerTexto(document.getElementById("instruccion-juego").textContent); }
 
 function dibujarRacha(resultados) {
   const cont = document.getElementById("racha");
@@ -445,7 +818,7 @@ function baraja(items) {
 
 function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
   const g = JUEGOS[idJuego];
-  const estado = { id: idJuego, dominio: g.dom, nivel: nivelDe(idJuego), aciertosSeguidos: 0, fallosSeguidos: 0, resultados: [], ronda: 0, terminado: false };
+  const estado = { id: idJuego, dominio: g.dom, nivel: nivelDe(idJuego), aciertosSeguidos: 0, fallosSeguidos: 0, resultados: [], tiempos: [], ronda: 0, terminado: false };
 
   const motor = {
     estado,
@@ -467,11 +840,12 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
       if (limpiarFn) limpiarFn();
       motor.limpiarZona();
       dibujarRacha(estado.resultados);
+      estado.tInicio = Date.now();
       motor.status(`Nivel ${estado.nivel} · Ronda ${estado.ronda + 1} de ${rondas}`);
       montarRonda(gen, motor);
     },
 
-    registrar(ok) {
+    registrar(ok, extraSesion) {
       if (estado.terminado) return;
       estado.resultados.push(ok ? "ok" : "mal");
       dibujarRacha(estado.resultados);
@@ -482,7 +856,12 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
         estado.fallosSeguidos++; estado.aciertosSeguidos = 0;
         sonidoMal(); mostrarFeedback(animo(), "mal");
       }
-      if (estado.aciertosSeguidos >= 3 && estado.nivel < NIVEL_MAX) {
+      const seg = (Date.now() - (estado.tInicio || Date.now())) / 1000;
+      estado.tiempos.push(seg);
+      if (MODO_TEST && MODO_TEST.escaleraTest) {
+        if (ok && estado.nivel < NIVEL_MAX) estado.nivel++;
+        if (!ok && estado.nivel > 1) estado.nivel--;
+      } else if (estado.aciertosSeguidos >= 3 && estado.nivel < NIVEL_MAX) {
         estado.nivel++; estado.aciertosSeguidos = 0;
         sonidoSubida(); mostrarFeedback("¡Subiste al nivel " + estado.nivel + "! 🎈", "subida");
       } else if (estado.fallosSeguidos >= 2 && estado.nivel > 1) {
@@ -490,22 +869,31 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
         mostrarFeedback("Vamos con calma, nivel " + estado.nivel + " 🙂", "subida");
       }
       estado.ronda++;
-      if (estado.ronda >= rondas) { motor.finalizar(); return; }
+      const limite = MODO_TEST ? Math.min(rondas, 4) : rondas;
+      if (estado.ronda >= limite) { motor.finalizar(extraSesion); return; }
       const gen = GEN;
       const demora = ok ? 1300 : 2000;
       setTimeout(() => { if (gen === GEN && !estado.terminado) motor.montar(); }, demora);
     },
 
-    finalizar() {
+    finalizar(extraSesion) {
       estado.terminado = true;
       GEN++;
       if (limpiarFn) limpiarFn();
       const aciertos = estado.resultados.filter(r => r === "ok").length;
+      if (MODO_TEST && MODO_TEST.alTerminar) {
+        MODO_TEST.alTerminar(estado.nivel);
+        return;
+      }
+      const segMedia = estado.tiempos.length ? +(estado.tiempos.reduce((a, b) => a + b, 0) / estado.tiempos.length).toFixed(1) : null;
       const ganadas = Math.max(1, Math.round(aciertos * estado.nivel / 3));
       const pf = perfilJuego(idJuego);
       pf.nivel = estado.nivel;
       pf.estrellas = (pf.estrellas || 0) + ganadas;
-      pac().sesiones.push({ f: Date.now(), j: idJuego, d: estado.dominio, a: aciertos, t: estado.resultados.length, n: estado.nivel });
+      const sesion = { f: Date.now(), j: idJuego, d: estado.dominio, a: aciertos, t: estado.resultados.length, n: estado.nivel, seg: segMedia };
+      if (extraSesion) Object.assign(sesion, extraSesion);
+      pac().sesiones.push(sesion);
+      checkMetaSemana();
       guardar(); refrescarEstrellas();
       document.getElementById("res-titulo").textContent = "¡Sesión completada!";
       document.getElementById("res-detalle").textContent = `${g.nombre} · Acertaste ${aciertos} de ${estado.resultados.length} · Nivel actual: ${estado.nivel} · +${ganadas} ⭐`;
@@ -669,6 +1057,74 @@ GAMES.mem3 = () => {
   });
 };
 
+const POOL_EMOJI = ["🍎", "🍌", "🍇", "🍓", "🍑", "🐶", "🐱", "🐰", "🦊", "⭐", "🚗", "🎈", "🐟", "🌻", "🌙", "⚽", "🎁", "🔑"];
+
+GAMES.mem4 = () => crearMotor("mem4", 1, (gen, motor) => {
+  const { estado } = motor;
+  motor.status("Aprende bien estas figuras...");
+  const cantidad = Math.min(7, 4 + Math.floor(estado.nivel / 3));
+  const items = mezclar(POOL_EMOJI).slice(0, cantidad);
+  const grid = document.createElement("div");
+  grid.className = "grid-emoji";
+  items.forEach(it => {
+    const c = document.createElement("div");
+    c.className = "celda-emoji";
+    c.textContent = it;
+    grid.appendChild(c);
+  });
+  motor.zona().appendChild(grid);
+  const dur = 3000 + cantidad * 900;
+  setTimeout(() => {
+    if (gen !== GEN) return;
+    grid.innerHTML = "";
+    const c = document.createElement("div");
+    c.className = "celda-emoji";
+    c.textContent = "🧠";
+    grid.appendChild(c);
+    motor.status("¡Guardadas! Sigue jugando... te preguntaremos en unos minutos 😉");
+    STORE.pendiente = { items, creado: Date.now(), listo: Date.now() + 5 * 60 * 1000 };
+    guardar();
+    setTimeout(() => { if (gen === GEN) motor.registrar(true); }, 1800);
+  }, dur);
+});
+
+GAMES.mem4d = (aprendidas) => crearMotor("mem4", 1, (gen, motor) => {
+  motor.status("Toca SOLO las figuras que aprendiste antes");
+  if (!aprendidas || !aprendidas.length) { motor.status("No hay figuras pendientes"); return; }
+  const distractores = mezclar(POOL_EMOJI.filter(p => !aprendidas.includes(p)))
+    .slice(0, Math.max(4, 12 - aprendidas.length));
+  const todas = mezclar([...aprendidas, ...distractores]);
+  const user = new Set();
+  const grid = document.createElement("div");
+  grid.className = "grid-emoji";
+  grid.style.maxWidth = "420px";
+  let comprobado = false;
+  todas.forEach(it => {
+    const c = document.createElement("div");
+    c.className = "celda-emoji";
+    c.style.cssText = "width:78px;height:78px;font-size:2.2rem";
+    c.textContent = it;
+    c.onclick = () => {
+      if (comprobado) return;
+      if (user.has(it)) { user.delete(it); c.classList.remove("sel"); }
+      else { user.add(it); c.classList.add("sel"); tono(440, 0.08); }
+    };
+    grid.appendChild(c);
+  });
+  motor.zona().appendChild(grid);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "✅ Comprobar";
+  btn.onclick = () => {
+    if (comprobado) return;
+    comprobado = true;
+    const exacto = user.size === aprendidas.length && aprendidas.every(a => user.has(a));
+    grid.querySelectorAll(".celda-emoji").forEach(c => { c.onclick = null; });
+    motor.registrar(exacto, { dif: 1 });
+  };
+  motor.zona().appendChild(btn);
+});
+
 GAMES.raz1 = () => {
   const colores = ["#4db6ac", "#ffb74d", "#f06292", "#9575cd", "#4fc3f7"];
   function figuraSVG(nLados, rot, color) {
@@ -803,6 +1259,95 @@ GAMES.raz2 = () => {
   });
 };
 
+GAMES.raz3 = () => {
+  const COLORES_DISCO = ["#f06292", "#ffb74d", "#4db6ac", "#64b5f6", "#ba68c8"];
+  const ANCHOS = [96, 80, 64, 48, 34];
+  return crearMotor("raz3", 4, (gen, motor) => {
+    const { estado } = motor;
+    const nDiscos = estado.nivel <= 2 ? 2 : estado.nivel <= 5 ? 3 : 4;
+    const optimo = Math.pow(2, nDiscos) - 1;
+    const margen = estado.nivel >= 9 ? 1 : 3;
+    const maxMov = optimo + margen;
+    motor.status(`Lleva la torre al poste derecho · Máximo ${maxMov} movimientos`);
+
+    const postes = [[...Array(nDiscos).keys()], [], []];
+    let sel = -1, movimientos = 0, cerrado = false;
+
+    const zona = motor.zona();
+    const hud = document.createElement("div");
+    hud.className = "hud-torre";
+    hud.innerHTML = `<span>🎯 Torre completa a la derecha</span><span id="hud-mov">Movimientos: 0 / ${maxMov}</span>`;
+    zona.appendChild(hud);
+
+    const cont = document.createElement("div");
+    cont.className = "zona-torre";
+    const etiquetas = ["izquierda", "centro", "derecha"];
+    const refsPoste = [];
+    for (let p = 0; p < 3; p++) {
+      const poste = document.createElement("div");
+      poste.className = "poste";
+      poste.innerHTML = `<div class="palo"></div><div class="base-poste"></div><div class="discos-torre"></div>`;
+      const et = document.createElement("div");
+      et.style.cssText = "position:absolute;top:2px;left:0;right:0;text-align:center;font-size:0.72rem;color:#9fb4d8";
+      et.textContent = etiquetas[p] + (p === 2 ? " 🎯" : "");
+      poste.appendChild(et);
+      poste.onclick = () => clicPoste(p);
+      cont.appendChild(poste);
+      refsPoste.push(poste);
+    }
+    zona.appendChild(cont);
+
+    function pintar() {
+      refsPoste.forEach((poste, p) => {
+        const contDiscos = poste.querySelector(".discos-torre");
+        contDiscos.innerHTML = "";
+        const arriba = sel === p && postes[p].length;
+        if (arriba) poste.classList.add("sel"); else poste.classList.remove("sel");
+        postes[p].forEach((d, i) => {
+          const el = document.createElement("div");
+          el.className = "disco" + (arriba && i === postes[p].length - 1 ? " flotando" : "");
+          el.style.width = ANCHOS[d] + "px";
+          el.style.background = COLORES_DISCO[d];
+          contDiscos.appendChild(el);
+        });
+      });
+      const hm = document.getElementById("hud-mov");
+      if (hm) hm.textContent = `Movimientos: ${movimientos} / ${maxMov}`;
+    }
+
+    function clicPoste(p) {
+      if (cerrado || gen !== GEN) return;
+      if (sel === -1) {
+        if (!postes[p].length) { sonidoMal(); return; }
+        sel = p; tono(500, 0.08); pintar();
+      } else if (sel === p) {
+        sel = -1; pintar();
+      } else {
+        const disco = postes[sel][postes[sel].length - 1];
+        const destino = postes[p];
+        if (destino.length && destino[destino.length - 1] < disco) {
+          sonidoMal(); mostrarFeedback("No puedes poner una grande sobre una pequeña", "mal");
+          sel = -1; pintar(); return;
+        }
+        postes[sel].pop(); destino.push(disco);
+        sel = -1; movimientos++; tono(440 + movimientos * 15, 0.08);
+        pintar();
+        if (postes[2].length === nDiscos) {
+          cerrado = true;
+          motor.registrar(true);
+          return;
+        }
+        if (movimientos >= maxMov) {
+          cerrado = true;
+          motor.status(`Se acabaron los movimientos 😅 · La torre se logra en ${optimo}`);
+          motor.registrar(false);
+        }
+      }
+    }
+    pintar();
+  });
+};
+
 GAMES.vel1 = () => {
   const bancos = [
     ["🐶", "🐱", "🐰", "🦊", "🐻"],
@@ -896,7 +1441,7 @@ GAMES.vel2 = () => {
     });
     motor.zona().appendChild(cont);
 
-    const dur = estado.nivel >= 6 ? 6000 : 8000;
+    const dur = (estado.nivel >= 6 ? 6000 : 8000) * multTiempo();
     const t0 = Date.now();
     clearInterval(intervalo);
     intervalo = setInterval(() => {
@@ -911,6 +1456,154 @@ GAMES.vel2 = () => {
       }
     }, 100);
   }, limpiarFn);
+};
+
+GAMES.vel3 = () => {
+  const COLORES = [
+    { n: "ROJO", c: "#e53935" }, { n: "AZUL", c: "#1e88e5" }, { n: "VERDE", c: "#43a047" },
+    { n: "AMARILLO", c: "#fdd835" }, { n: "NARANJA", c: "#fb8c00" }
+  ];
+  let intervalo = null;
+  const limpiarFn = () => clearInterval(intervalo);
+  return crearMotor("vel3", 6, (gen, motor) => {
+    const { estado } = motor;
+    const palabra = COLORES[Math.floor(Math.random() * COLORES.length)];
+    let tinta = COLORES[Math.floor(Math.random() * COLORES.length)];
+    while (tinta === palabra) tinta = COLORES[Math.floor(Math.random() * COLORES.length)];
+    const nOps = estado.nivel >= 4 ? 5 : 4;
+    let opciones = mezclar(COLORES.filter(c => c !== palabra)).slice(0, nOps - 1);
+    opciones.push(tinta);
+
+    motor.status("¡Toca el color de las LETRAS, no lo que dice!");
+    const caja = document.createElement("div");
+    caja.className = "palabra-color";
+    caja.textContent = palabra.n;
+    caja.style.color = tinta.c;
+    caja.style.textShadow = "0 1px 3px rgba(0,0,0,0.4)";
+    motor.zona().appendChild(caja);
+    const pista = document.createElement("div");
+    pista.className = "pista-tiempo";
+    const relleno = document.createElement("div");
+    relleno.className = "pista-relleno";
+    pista.appendChild(relleno);
+    motor.zona().appendChild(pista);
+    const cont = document.createElement("div");
+    cont.className = "circulos-color";
+    let respondido = false;
+    mezclar(opciones).forEach(o => {
+      const b = document.createElement("button");
+      b.className = "circulo-color";
+      b.style.background = o.c;
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true; clearInterval(intervalo);
+        motor.registrar(o === tinta);
+      };
+      cont.appendChild(b);
+    });
+    motor.zona().appendChild(cont);
+
+    const dur = (estado.nivel >= 6 ? 7000 : 9000) * multTiempo();
+    const t0 = Date.now();
+    clearInterval(intervalo);
+    intervalo = setInterval(() => {
+      if (gen !== GEN) { clearInterval(intervalo); return; }
+      const pas = Date.now() - t0;
+      relleno.style.width = Math.max(0, 100 - pas / dur * 100) + "%";
+      if (pas >= dur) {
+        clearInterval(intervalo);
+        if (respondido) return;
+        respondido = true;
+        motor.registrar(false);
+      }
+    }, 100);
+  }, limpiarFn);
+};
+
+GAMES.vel4 = () => {
+  const NS = "http://www.w3.org/2000/svg";
+  function posiciones(n) {
+    const pts = [];
+    let guard = 0;
+    const minDist = n > 8 ? 48 : 60;
+    while (pts.length < n && guard < 2000) {
+      guard++;
+      const x = 46 + Math.random() * 392, y = 46 + Math.random() * 272;
+      if (pts.every(p => Math.hypot(p.x - x, p.y - y) >= minDist)) pts.push({ x, y });
+    }
+    while (pts.length < n) pts.push({ x: 46 + Math.random() * 392, y: 46 + Math.random() * 272 });
+    return pts;
+  }
+  return crearMotor("vel4", 5, (gen, motor) => {
+    const { estado } = motor;
+    let etiquetas;
+    if (estado.nivel < 4) {
+      const n = Math.min(10, 3 + estado.nivel);
+      etiquetas = Array.from({ length: n }, (_, i) => String(i + 1));
+    } else {
+      const p = Math.min(3 + Math.floor((estado.nivel - 4) / 2), 6);
+      etiquetas = [];
+      for (let k = 1; k <= p; k++) {
+        etiquetas.push(String(k));
+        etiquetas.push(String.fromCharCode(64 + k));
+      }
+    }
+    motor.status(`Toca en orden: ${etiquetas.slice(0, 4).join(", ")}...`);
+
+    const pos = posiciones(etiquetas.length);
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 484 364");
+    svg.setAttribute("width", "484");
+    svg.setAttribute("height", "364");
+    svg.setAttribute("class", "svg-trail");
+
+    const capasLineas = document.createElementNS(NS, "g");
+    svg.appendChild(capasLineas);
+
+    let esperado = 0, errores = 0, cerrado = false, anterior = null;
+    const nodos = [];
+    pos.forEach((p, i) => {
+      const g = document.createElementNS(NS, "g");
+      g.setAttribute("class", "nodo");
+      const c = document.createElementNS(NS, "circle");
+      c.setAttribute("cx", p.x); c.setAttribute("cy", p.y); c.setAttribute("r", 22);
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", p.x); t.setAttribute("y", p.y + 7);
+      t.textContent = etiquetas[i];
+      g.appendChild(c); g.appendChild(t);
+      g.onclick = () => {
+        if (cerrado) return;
+        if (i === esperado) {
+          g.classList.remove("siguiente"); g.classList.add("hecho");
+          tono(400 + i * 35, 0.1);
+          if (anterior) {
+            const l = document.createElementNS(NS, "line");
+            l.setAttribute("x1", anterior.x); l.setAttribute("y1", anterior.y);
+            l.setAttribute("x2", p.x); l.setAttribute("y2", p.y);
+            l.setAttribute("stroke", "#81c784"); l.setAttribute("stroke-width", 3);
+            l.setAttribute("stroke-linecap", "round");
+            capasLineas.appendChild(l);
+          }
+          anterior = p;
+          esperado++;
+          if (esperado < nodos.length) nodos[esperado].classList.add("siguiente");
+          else {
+            cerrado = true;
+            motor.status("¡Camino completo! 🎉");
+            motor.registrar(errores <= 1);
+          }
+        } else if (!g.classList.contains("hecho")) {
+          g.classList.add("error");
+          setTimeout(() => g.classList.remove("error"), 350);
+          errores++; sonidoMal();
+        }
+      };
+      nodos.push(g);
+      svg.appendChild(g);
+    });
+    if (nodos.length) nodos[0].classList.add("siguiente");
+    motor.zona().appendChild(svg);
+  });
 };
 
 GAMES.ver1 = () => {
@@ -1039,6 +1732,122 @@ GAMES.ver3 = () => {
   });
 };
 
+GAMES.ver4 = () => {
+  const HISTORIAS = [
+    { dif: 1, t: "Lucía fue al parque con su perro. Jugaron con la pelota. Al volver, Lucía le dio agua al perro porque tenía calor.",
+      qs: [
+        { q: "¿A dónde fue Lucía?", ok: "Al parque", ops: ["Al colegio", "Al mercado"] },
+        { q: "¿Con quién fue?", ok: "Con su perro", ops: ["Con su hermana", "Con su prima"] },
+        { q: "¿Por qué le dio agua al perro?", ok: "Porque tenía calor", ops: ["Porque tenía hambre", "Porque estaba sucio"] }
+      ] },
+    { dif: 1, t: "Mateo olvidó su lonchera en casa. En el recreo no tenía nada para comer. Su amiga Sofía le compartió la mitad de su sándwich.",
+      qs: [
+        { q: "¿Qué olvidó Mateo?", ok: "Su lonchera", ops: ["Su mochila", "Su pelota"] },
+        { q: "¿Quién lo ayudó?", ok: "Sofía", ops: ["Su maestra", "Su hermano"] },
+        { q: "¿Qué hizo Sofía?", ok: "Le compartió comida", ops: ["Le prestó dinero", "Le regaló un juguete"] }
+      ] },
+    { dif: 2, t: "En el colegio hubo una competencia de carreras. Ana entrenó toda la semana. El día de la carrera, Ana cayó al suelo, pero se levantó y terminó la carrera. Todos la aplaudieron.",
+      qs: [
+        { q: "¿Qué competencia hubo?", ok: "De carreras", ops: ["De natación", "De lectura"] },
+        { q: "¿Qué le pasó a Ana?", ok: "Cayó al suelo", ops: ["Se perdió", "Llegó tarde"] },
+        { q: "¿Por qué la aplaudieron?", ok: "Porque terminó aunque cayó", ops: ["Porque ganó el primer puesto", "Porque dejó de correr"] }
+      ] },
+    { dif: 2, t: "Papá le prometió a Tomás ir al cine el sábado. El sábado llovió mucho y el auto no encendió. Tomás se puso triste, pero papá le dijo que irían el domingo y esa noche alquilaron una película.",
+      qs: [
+        { q: "¿Qué le prometió papá?", ok: "Ir al cine", ops: ["Ir al parque", "Comprar juguetes"] },
+        { q: "¿Por qué no pudieron ir?", ok: "Llovió y el auto no encendió", ops: ["Tomás se enfermó", "El cine estaba cerrado"] },
+        { q: "¿Qué hicieron al final?", ok: "Alquilaron una película", ops: ["Fueron a dormir", "Jugaron en la lluvia"] }
+      ] },
+    { dif: 3, t: "La maestra pidió traer una planta para el curso. Camila trajo una planta pequeña y la puso cerca de la ventana. Cada día, un alumno distinto la riega. Después de unas semanas, la planta creció y le salió una flor.",
+      qs: [
+        { q: "¿Qué trajo Camila?", ok: "Una planta", ops: ["Un pez", "Un cuadro"] },
+        { q: "¿Quién riega la planta?", ok: "Cada día un alumno distinto", ops: ["Solo Camila", "La maestra"] },
+        { q: "¿Qué le salió a la planta?", ok: "Una flor", ops: ["Una fruta", "Otra planta"] }
+      ] },
+    { dif: 3, t: "Diego colecciona piedras. En las vacaciones encontró una piedra brillante en la playa. La limpió y la guardó en su caja especial. Sus amigos le pidieron verla y él la mostró con mucho cuidado.",
+      qs: [
+        { q: "¿Qué colecciona Diego?", ok: "Piedras", ops: ["Estampillas", "Monedas"] },
+        { q: "¿Dónde encontró la piedra brillante?", ok: "En la playa", ops: ["En el colegio", "En el patio"] },
+        { q: "¿Cómo la mostró?", ok: "Con cuidado", ops: ["La escondió", "La tiró"] }
+      ] }
+  ];
+  return crearMotor("ver4", 4, (gen, motor) => {
+    const { estado } = motor;
+    const maxDif = estado.nivel <= 3 ? 1 : estado.nivel <= 6 ? 2 : 3;
+    const pool = HISTORIAS.filter(h => h.dif <= maxDif);
+    const h = pool[Math.floor(Math.random() * pool.length)];
+
+    const zona = motor.zona();
+    const tarjeta = document.createElement("div");
+    tarjeta.className = "tarjeta-historia";
+    tarjeta.textContent = h.t;
+    zona.appendChild(tarjeta);
+
+    const filaBtn = document.createElement("div");
+    filaBtn.className = "navegacion";
+    const bAudio = document.createElement("button");
+    bAudio.className = "btn secundario";
+    bAudio.textContent = "🔊 Escuchar";
+    bAudio.onclick = () => leerTexto(h.t);
+    const bSeguir = document.createElement("button");
+    bSeguir.className = "btn";
+    bSeguir.textContent = "Responder ➡";
+    filaBtn.append(bAudio, bSeguir);
+    zona.appendChild(filaBtn);
+
+    bSeguir.onclick = () => {
+      let i = 0, aciertos = 0;
+      const contPreg = document.createElement("div");
+      contPreg.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:14px;width:100%";
+      const bVer = document.createElement("button");
+      bVer.className = "btn-audio";
+      bVer.textContent = "📖 Ver la historia de nuevo";
+      let visible = false;
+      bVer.onclick = () => {
+        visible = !visible;
+        tarjeta.style.display = visible ? "block" : "none";
+        bVer.textContent = visible ? "🙈 Ocultar la historia" : "📖 Ver la historia de nuevo";
+      };
+      tarjeta.style.display = "none";
+      contPreg.appendChild(bVer);
+
+      function pintarPregunta() {
+        contPreg.querySelectorAll(".pregunta-h,.columna-opciones").forEach(e => e.remove());
+        if (i >= h.qs.length) {
+          motor.registrar(aciertos >= 2);
+          return;
+        }
+        const p = h.qs[i];
+        const q = document.createElement("div");
+        q.className = "palabra-ver pregunta-h";
+        q.style.cssText = "font-size:1.5rem;color:#ffb300";
+        q.textContent = p.q;
+        const cont = document.createElement("div");
+        cont.className = "columna-opciones";
+        let respondido = false;
+        mezclar([p.ok, ...p.ops]).forEach(o => {
+          const b = document.createElement("button");
+          b.className = "btn-ver";
+          b.textContent = o;
+          b.onclick = () => {
+            if (respondido) return;
+            respondido = true;
+            if (o === p.ok) { aciertos++; b.style.borderColor = "#81c784"; tono(700, 0.12); }
+            else { b.style.borderColor = "#ef5350"; sonidoMal(); }
+            i++;
+            setTimeout(pintarPregunta, 850);
+          };
+          cont.appendChild(b);
+        });
+        contPreg.append(q, cont);
+      }
+      zona.appendChild(contPreg);
+      filaBtn.style.display = "none";
+      pintarPregunta();
+    };
+  });
+};
+
 GAMES.vis1 = () => {
   function poligonoSVG(lados, rot, color, espejo) {
     const pts = [];
@@ -1160,6 +1969,258 @@ GAMES.vis2 = () => crearMotor("vis2", 6, (gen, motor) => {
   zona.appendChild(btn);
 });
 
+GAMES.soc1 = () => {
+  const EMOCIONES = {
+    feliz: { n: "Feliz", e: "😀" }, triste: { n: "Triste", e: "😢" }, enojado: { n: "Enojado", e: "😡" },
+    miedo: { n: "Miedo", e: "😨" }, sorpresa: { n: "Sorprendido", e: "😮" }, verguenza: { n: "Avergonzado", e: "😳" },
+    aburrido: { n: "Aburrido", e: "🥱" }, orgulloso: { n: "Orgulloso", e: "😎" }
+  };
+  const SITUACIONES = [
+    { t: "Su equipo ganó el partido final", ok: "feliz", ops: ["enojado", "triste", "miedo", "aburrido"] },
+    { t: "Se le murió su mascota que quería mucho", ok: "triste", ops: ["feliz", "sorpresa", "orgulloso", "aburrido"] },
+    { t: "Alguien rompió su juguete favorito a propósito", ok: "enojado", ops: ["feliz", "miedo", "aburrido", "verguenza"] },
+    { t: "Escucha un ruido extraño en la noche estando solo", ok: "miedo", ops: ["feliz", "enojado", "orgulloso", "aburrido"] },
+    { t: "Le regalan algo que no esperaba para nada", ok: "sorpresa", ops: ["triste", "enojado", "aburrido", "miedo"] },
+    { t: "Se trozó frente a toda la clase y todos se rieron", ok: "verguenza", ops: ["orgulloso", "feliz", "enojado", "aburrido"] },
+    { t: "Nadie quiere jugar con él en el recreo", ok: "triste", ops: ["feliz", "sorpresa", "orgulloso", "miedo"] },
+    { t: "Terminó una tarea muy difícil con mucho esfuerzo", ok: "orgulloso", ops: ["verguenza", "miedo", "triste", "sorpresa"] },
+    { t: "La clase es larguísima y no termina nunca", ok: "aburrido", ops: ["sorpresa", "orgulloso", "miedo", "feliz"] },
+    { t: "Mañana va al dentista por primera vez y no sabe qué pasará", ok: "miedo", ops: ["orgulloso", "aburrido", "feliz", "verguenza"] },
+    { t: "Sacó la mejor nota estudiando mucho", ok: "orgulloso", ops: ["miedo", "triste", "verguenza", "aburrido"] },
+    { t: "Encontró una billetera llena de dinero en el suelo", ok: "sorpresa", ops: ["aburrido", "triste", "orgulloso", "verguenza"] }
+  ];
+  const robar = baraja(SITUACIONES);
+  return crearMotor("soc1", 6, (gen, motor) => {
+    const { estado } = motor;
+    const sit = robar();
+    motor.status("¿Cómo se siente la persona de la situación?");
+    const tarjeta = document.createElement("div");
+    tarjeta.className = "tarjeta-historia";
+    tarjeta.textContent = sit.t;
+    motor.zona().appendChild(tarjeta);
+    const bAudio = document.createElement("button");
+    bAudio.className = "btn-audio";
+    bAudio.textContent = "🔊 Escuchar la situación";
+    bAudio.onclick = () => leerTexto(sit.t);
+    motor.zona().appendChild(bAudio);
+
+    const nOps = estado.nivel >= 5 ? 4 : estado.nivel >= 3 ? 3 : 2;
+    const ops = [sit.ok, ...mezclar(sit.ops).slice(0, nOps - 1)];
+    let respondido = false;
+    const cont = document.createElement("div");
+    cont.className = "opciones";
+    mezclar(ops).forEach(k => {
+      const em = EMOCIONES[k];
+      const b = document.createElement("button");
+      b.className = "op-emoji";
+      b.style.flexDirection = "column";
+      b.innerHTML = `${em.e}<span class="etiqueta-emocion">${em.n}</span>`;
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true;
+        motor.registrar(k === sit.ok);
+      };
+      cont.appendChild(b);
+    });
+    motor.zona().appendChild(cont);
+  });
+};
+
+function crearDemoItem(txt, contenido) {
+  const d = document.createElement("div");
+  d.className = "demo-item";
+  d.innerHTML = `<div class="demo-circulo">${contenido || ""}</div><div class="demo-texto">${txt}</div>`;
+  return d;
+}
+function secuenciaDemo(escenario, mensaje, pasos, fin) {
+  let i = 0;
+  function paso() {
+    if (i >= pasos.length) { mensaje.textContent = fin; return; }
+    const p = pasos[i];
+    mensaje.textContent = p.msg;
+    if (p.marcar != null) p.items[p.marcar].classList.add(p.clase || "destello");
+    if (p.limpiarAnterior != null) p.items[p.limpiarAnterior].classList.remove(p.claseAnterior || "destello");
+    i++;
+    setTimeout(paso, p.dur || 1100);
+  }
+  paso();
+}
+
+const DEMOS = {};
+
+DEMOS.mem1 = (esc, msg) => {
+  const a = crearDemoItem("1", "💡"), b = crearDemoItem("2", "💡"), c = crearDemoItem("3", "💡");
+  esc.append(a, b, c);
+  secuenciaDemo(esc, msg, [
+    { msg: "Se encienden algunas casillas...", marcar: 0, items: [a, b, c], dur: 1000 },
+    { msg: "...una después de otra", marcar: 2, items: [a, b, c], clase: "destello", dur: 1200 },
+    { msg: "¡Tu turno! Repite el mismo orden", limpiarAnterior: 2, items: [a, b, c], claseAnterior: "destello", dur: 1300 }
+  ], "Toca las casillas en el MISMO orden 💡→💡");
+};
+
+DEMOS.mem2 = (esc, msg) => {
+  const n = crearDemoItem("Aparece: 2 7 4", "🔢"), r = crearDemoItem("Tú tocas: 4 7 2", "🔄");
+  esc.append(n, r);
+  secuenciaDemo(esc, msg, [
+    { msg: "Memoriza los números que aparecen", dur: 1400 },
+    { msg: "Luego tócalos AL REVÉS: ¡empezando por el último!", marcar: 1, items: [n, r], dur: 1600 }
+  ], "Si ve 2 7 4 → tocas 4, luego 7, luego 2");
+};
+
+DEMOS.mem3 = (esc, msg) => {
+  const items = ["🍎", "🐶", "⭐"].map((e, i) => crearDemoItem(["1", "2", "3"][i], e));
+  esc.append(...items);
+  secuenciaDemo(esc, msg, [
+    { msg: "Memoriza los dibujos...", dur: 1300 },
+    { msg: "Uno desaparece... ¿cuál era?", marcar: 1, items, dur: 1500 }
+  ], "Elige el dibujo que falta entre las opciones");
+};
+
+DEMOS.mem4 = (esc, msg) => {
+  const a = crearDemoItem("Aprende", "🧠"), b = crearDemoItem("Espera", "⏳"), c = crearDemoItem("¡Te preguntamos!", "⏰");
+  esc.append(a, b, c);
+  secuenciaDemo(esc, msg, [
+    { msg: "Aprende bien las figuras que te mostramos", marcar: 0, items: [a, b, c], dur: 1400 },
+    { msg: "Sigue jugando otros juegos...", marcar: 1, items: [a, b, c], dur: 1400 },
+    { msg: "¡Y de pronto aparecerá la pregunta!", marcar: 2, items: [a, b, c], dur: 1500 }
+  ], "Sin apuro: aprende bien las figuras");
+};
+
+DEMOS.raz1 = (esc, msg) => {
+  const f = (nl, rot, col) => {
+    let pts = [];
+    for (let i = 0; i < nl; i++) {
+      const a = (2 * Math.PI * i / nl) - Math.PI / 2;
+      pts.push(`${46 + 26 * Math.cos(a)},${46 + 26 * Math.sin(a)}`);
+    }
+    return `<svg viewBox="0 0 92 92" width="52" height="52"><polygon points="${pts.join(" ")}" fill="${col}"/><circle cx="46" cy="16" r="5" fill="#fff"/></svg>`;
+  };
+  const items = [crearDemoItem("va girando", f(4, 0, "#4db6ac")), crearDemoItem("cada vez más", f(4, 45, "#4db6ac")), crearDemoItem("más girada", f(4, 90, "#4db6ac")), crearDemoItem("¿siguiente?", "❓")];
+  esc.append(...items);
+  secuenciaDemo(esc, msg, [
+    { msg: "Mira el patrón de la fila...", dur: 1500 },
+    { msg: "¿Qué figura sigue?", marcar: 3, items, dur: 1600 }
+  ], "Elige entre las opciones la que completa el patrón");
+};
+
+DEMOS.raz2 = (esc, msg) => {
+  const a = crearDemoItem("Ejemplo: cambia color y crece", "🔴➡🔵"), b = crearDemoItem("Tu pareja: ¿cómo queda?", "🟢➡❓");
+  esc.append(a, b);
+  secuenciaDemo(esc, msg, [
+    { msg: "La 1ª figura cambió así...", marcar: 0, items: [a, b], dur: 1600 },
+    { msg: "La última debe cambiar IGUAL", marcar: 1, items: [a, b], dur: 1600 }
+  ], "Mira el cambio del ejemplo y aplícalo a la última");
+};
+
+DEMOS.raz3 = (esc, msg) => {
+  const a = crearDemoItem("1. Toca el poste", "🗼"), b = crearDemoItem("2. Se levanta el disco", "⬆"), c = crearDemoItem("3. Toca otro poste", "🎯");
+  esc.append(a, b, c);
+  secuenciaDemo(esc, msg, [
+    { msg: "Toca un poste para levantar su disco de arriba", marcar: 0, items: [a, b, c], dur: 1500 },
+    { msg: "Luego toca otro poste para soltarlo ahí", marcar: 2, items: [a, b, c], dur: 1600 }
+  ], "Lleva TODA la torre a la derecha · nunca grande sobre pequeña");
+};
+
+DEMOS.vel1 = (esc, msg) => {
+  const obj = crearDemoItem("Encuentra estos", "⭐"), g = crearDemoItem("Entre todos", "⭐ ❤️ 🔵 🔺 ⭐");
+  esc.append(obj, g);
+  secuenciaDemo(esc, msg, [
+    { msg: "Arriba verás un dibujo objetivo", marcar: 0, items: [obj, g], dur: 1300 },
+    { msg: "Toca TODOS los iguales en la cuadrícula", marcar: 1, items: [obj, g], dur: 1600 }
+  ], "Encuéntralos todos, sin prisa pero sin pausa");
+};
+
+DEMOS.vel2 = (esc, msg) => {
+  const p = crearDemoItem("Dice: AZUL", "AZUL"), c = crearDemoItem("Tocas el círculo azul", "🔵");
+  esc.append(p, c);
+  secuenciaDemo(esc, msg, [
+    { msg: "Lee el nombre del color", marcar: 0, items: [p, c], dur: 1400 },
+    { msg: "Y toca el círculo de ESE color, ¡rápido!", marcar: 1, items: [p, c], dur: 1500 }
+  ], "Palabra AZUL → círculo azul, antes de que se acabe la barra");
+};
+
+DEMOS.vel3 = (esc, msg) => {
+  const p = crearDemoItem("Dice ROJO pero escribe en VERDE", '<span style="color:#43a047;font-weight:800">ROJO</span>');
+  const c = crearDemoItem("¡Tocas el círculo VERDE!", "🟢");
+  esc.append(p, c);
+  secuenciaDemo(esc, msg, [
+    { msg: "La palabra DICE un color...", marcar: 0, items: [p, c], dur: 1600 },
+    { msg: "...pero la tinta con que está escrita es OTRO. ¡Toca el color de la TINTA!", marcar: 1, items: [p, c], dur: 2000 }
+  ], "ROJO escrito en verde → tocas el verde 🟢");
+};
+
+DEMOS.vel4 = (esc, msg) => {
+  const items = ["1", "A", "2", "B"].map((e, i) => crearDemoItem(["primero", "luego letra", "siguiente", "y letra"][i], e));
+  esc.append(...items);
+  secuenciaDemo(esc, msg, [
+    { msg: "Toca los círculos en orden...", marcar: 0, items, dur: 1100 },
+    { msg: "En niveles altos: número, letra, número, letra", marcar: 3, items, dur: 1800 }
+  ], "Sigue el orden sin equivocarte");
+};
+
+DEMOS.ver1 = (esc, msg) => {
+  const p = crearDemoItem("Palabra: PERRO", "💬"), c = crearDemoItem("Grupo: Animales", "🐾");
+  esc.append(p, c);
+  secuenciaDemo(esc, msg, [
+    { msg: "Lee la palabra", marcar: 0, items: [p, c], dur: 1300 },
+    { msg: "Elige el grupo al que pertenece", marcar: 1, items: [p, c], dur: 1500 }
+  ], "PERRO → Animales");
+};
+
+DEMOS.ver2 = (esc, msg) => {
+  const items = ["Manzana", "Plátano", "Silla", "Uva"].map((w, i) => crearDemoItem("", w));
+  esc.append(...items);
+  secuenciaDemo(esc, msg, [
+    { msg: "Tres palabras van juntas...", dur: 1400 },
+    { msg: "...y una es la intrusa. ¡Encuéntrala!", marcar: 2, items, dur: 1700 }
+  ], "Silla no es fruta: es la intrusa");
+};
+
+DEMOS.ver3 = (esc, msg) => {
+  const p = crearDemoItem("Feliz", "💬"), c = crearDemoItem("Contento ✅", "🔗");
+  esc.append(p, c);
+  secuenciaDemo(esc, msg, [
+    { msg: "Busca la palabra que significa LO MISMO", marcar: 0, items: [p, c], dur: 1400 },
+    { msg: "Feliz = Contento", marcar: 1, items: [p, c], dur: 1400 }
+  ], "Elige el sinónimo correcto");
+};
+
+DEMOS.ver4 = (esc, msg) => {
+  const a = crearDemoItem("Lee o escucha", "📖"), b = crearDemoItem("Responde", "❓");
+  esc.append(a, b);
+  secuenciaDemo(esc, msg, [
+    { msg: "Lee la historia (o pulsa 🔊 para escucharla)", marcar: 0, items: [a, b], dur: 1600 },
+    { msg: "Responde las preguntas. ¡Puedes verla de nuevo!", marcar: 1, items: [a, b], dur: 1600 }
+  ], "Concentrado: las preguntas son sobre la historia");
+};
+
+DEMOS.vis1 = (esc, msg) => {
+  const items = [crearDemoItem("La tuya", "🔺"), crearDemoItem("Girada ✅", "🔻"), crearDemoItem("Espejo ❌", "◂")];
+  esc.append(...items);
+  secuenciaDemo(esc, msg, [
+    { msg: "Busca la figura IGUAL a la tuya...", marcar: 1, items, dur: 1500 },
+    { msg: "...pero GIRADA. ¡Las reflejadas no valen!", marcar: 2, items, dur: 1700 }
+  ], "Misma figura girada = correcta · reflejada = trampa");
+};
+
+DEMOS.vis2 = (esc, msg) => {
+  const a = crearDemoItem("Modelo", "🟥🟦⬜"), b = crearDemoItem("Copia tú", "⬜⬜⬜");
+  esc.append(a, b);
+  secuenciaDemo(esc, msg, [
+    { msg: "Mira el modelo de la izquierda", marcar: 0, items: [a, b], dur: 1500 },
+    { msg: "Toca bloques para copiarlo y pulsa Comprobar", marcar: 1, items: [a, b], dur: 1600 }
+  ], "Que quede exactamente igual al modelo");
+};
+
+DEMOS.soc1 = (esc, msg) => {
+  const s = crearDemoItem("Ganó el partido", "🏆"), e1 = crearDemoItem("Feliz ✅", "😀"), e2 = crearDemoItem("Triste ❌", "😢");
+  esc.append(s, e1, e2);
+  secuenciaDemo(esc, msg, [
+    { msg: "Lee la situación de la persona", marcar: 0, items: [s, e1, e2], dur: 1500 },
+    { msg: "¿Cómo se siente? Elige la cara correcta", marcar: 1, items: [s, e1, e2], dur: 1600 }
+  ], "Ganar el partido → se siente feliz 😀");
+};
+
 function renderPerfil() {
   const cont = document.getElementById("perfil-barras");
   cont.innerHTML = "";
@@ -1251,6 +2312,86 @@ function probarPin() {
   }
 }
 
+function generarInforme() {
+  const p = pac();
+  const zona = document.getElementById("informe-print");
+  const ahora = new Date();
+  const fecha = ahora.toLocaleDateString("es", { day: "2-digit", month: "long", year: "numeric" });
+  const totalSesiones = p.sesiones.length;
+  const primera = totalSesiones ? new Date(p.sesiones[0].f).toLocaleDateString("es") : "—";
+
+  const filasDom = Object.entries(DOMINIOS).map(([dom, d]) => {
+    const ids = Object.keys(JUEGOS).filter(j => JUEGOS[j].dom === dom);
+    const nivelMedio = (ids.reduce((s, j) => s + nivelDe(j), 0) / ids.length).toFixed(1);
+    const ses = p.sesiones.filter(s => s.d === dom);
+    const prec = ses.length ? Math.round(ses.reduce((s, x) => s + x.a / x.t, 0) / ses.length * 100) + "%" : "—";
+    const conSeg = ses.filter(s => s.seg);
+    const tiempo = conSeg.length ? (conSeg.reduce((s, x) => s + x.seg, 0) / conSeg.length).toFixed(1) + " s" : "—";
+    return `<tr><td>${d.nombre}</td><td>${nivelMedio}</td><td>${ses.length}</td><td>${prec}</td><td>${tiempo}</td></tr>`;
+  }).join("");
+
+  const filasJuegos = Object.entries(JUEGOS).map(([id, g]) => {
+    const ses = p.sesiones.filter(s => s.j === id);
+    const mejor = ses.length ? Math.max(...ses.map(s => Math.round(s.a / s.t * 100))) + "%" : "—";
+    return `<tr><td>${g.nombre}</td><td>${DOMINIOS[g.dom].nombre}</td><td>${nivelDe(id)}</td><td>${ses.length}</td><td>${mejor}</td></tr>`;
+  }).join("");
+
+  const ultimas = p.sesiones.slice(-10).reverse().map(s => {
+    const f = new Date(s.f);
+    return `<tr><td>${f.toLocaleDateString("es")} ${f.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}</td><td>${JUEGOS[s.j] ? JUEGOS[s.j].nombre : s.j}</td><td>${s.n}</td><td>${s.a}/${s.t}</td></tr>`;
+  }).join("") || '<tr><td colspan="4">Sin sesiones registradas</td></tr>';
+
+  const dominiosNivel = Object.entries(DOMINIOS).map(([dom, d]) => {
+    const ids = Object.keys(JUEGOS).filter(j => JUEGOS[j].dom === dom);
+    return { dom, nombre: d.nombre, icono: d.icono, nivel: ids.reduce((s, j) => s + nivelDe(j), 0) / ids.length };
+  });
+  const fortaleza = dominiosNivel.reduce((a, b) => b.nivel > a.nivel ? b : a);
+  const reforzar = dominiosNivel.reduce((a, b) => b.nivel < a.nivel ? b : a);
+
+  zona.innerHTML = `
+    <h1>🧠 NeuroJuego · Informe de progreso cognitivo</h1>
+    <div class="inf-cab">
+      <div><b>Paciente:</b> ${p.nombre}</div>
+      <div><b>Fecha del informe:</b> ${fecha}</div>
+      <div><b>Sesiones totales:</b> ${totalSesiones} · <b>Primera sesión:</b> ${primera}</div>
+    </div>
+
+    <h2>Resumen por dominio cognitivo</h2>
+    <table class="inf-tabla">
+      <tr><th>Dominio</th><th>Nivel medio (1-10)</th><th>Sesiones</th><th>Precisión media</th><th>Tiempo por ronda</th></tr>
+      ${filasDom}
+    </table>
+
+    <h2>Detalle por ejercicio</h2>
+    <table class="inf-tabla">
+      <tr><th>Ejercicio</th><th>Dominio</th><th>Nivel actual</th><th>Sesiones</th><th>Mejor precisión</th></tr>
+      ${filasJuegos}
+    </table>
+
+    <h2>Últimas sesiones</h2>
+    <table class="inf-tabla">
+      <tr><th>Fecha</th><th>Ejercicio</th><th>Nivel</th><th>Aciertos</th></tr>
+      ${ultimas}
+    </table>
+
+    <h2>Lectura general</h2>
+    <div class="inf-nota">
+      Área con mejor desempeño actual: <span class="inf-dest">${fortaleza.icono} ${fortaleza.nombre}</span> (nivel ${fortaleza.nivel.toFixed(1)}).
+      Área que sugiere mayor refuerzo: <span class="inf-dest">${reforzar.icono} ${reforzar.nombre}</span> (nivel ${reforzar.nivel.toFixed(1)}).
+      ${totalSesiones < 5 ? "Nota: con pocas sesiones registradas, los resultados son orientativos y conviene reevaluar tras mayor uso." : "La adaptación automática de dificultad mantiene al paciente en su zona de desarrollo próximo."}
+    </div>
+    <div class="inf-nota" style="background:#fff;border-left:4px solid #111">
+      Observaciones del profesional: ______________________________________________
+      ____________________________________________________________________________
+    </div>
+
+    <div style="font-size:0.75rem;color:#555;margin-top:18px">
+      Generado por NeuroJuego el ${fecha} · Los niveles (1-10) se ajustan automáticamente al rendimiento ·
+      Precisión = respuestas correctas / rondas · Este informe es una herramienta de estimulación, no un diagnóstico.
+    </div>`;
+  window.print();
+}
+
 function sparkline(sesionesDom) {
   const ult = sesionesDom.slice(-12);
   if (ult.length < 2) return `<span class="vacio">—</span>`;
@@ -1278,6 +2419,39 @@ function renderTerapeuta() {
   zona.appendChild(cab);
   cab.querySelector("#btn-ir-pac").onclick = irAPacientes;
 
+  const configCard = document.createElement("div");
+  configCard.className = "tarjeta-panel";
+  const cfg = p.config || {};
+  configCard.innerHTML = `<h3>Ajustes del paciente</h3>
+    <div class="fila-ajuste">
+      <span class="nombre-j">⏱ Tiempo en juegos con reloj (Toca el color, Colores tramposos)</span>
+      <select id="sel-tiempo" class="sel-panel">
+        <option value="relajado"${cfg.tiempo === "relajado" ? " selected" : ""}>Relajado (+60% tiempo)</option>
+        <option value="normal"${!cfg.tiempo || cfg.tiempo === "normal" ? " selected" : ""}>Normal</option>
+        <option value="intensivo"${cfg.tiempo === "intensivo" ? " selected" : ""}>Intensivo (−25% tiempo)</option>
+      </select>
+    </div>
+    <div class="fila-ajuste">
+      <span class="nombre-j">🎯 Meta de sesiones por semana</span>
+      <select id="sel-meta" class="sel-panel">
+        <option value="4"${cfg.metaSemanal === 4 ? " selected" : ""}>4 sesiones (suave)</option>
+        <option value="6"${!cfg.metaSemanal || cfg.metaSemanal === 6 ? " selected" : ""}>6 sesiones (normal)</option>
+        <option value="10"${cfg.metaSemanal === 10 ? " selected" : ""}>10 sesiones (constante)</option>
+        <option value="15"${cfg.metaSemanal === 15 ? " selected" : ""}>15 sesiones (intenso)</option>
+      </select>
+    </div>`;
+  zona.appendChild(configCard);
+  configCard.querySelector("#sel-tiempo").onchange = (e) => {
+    p.config = Object.assign({}, p.config, { tiempo: e.target.value });
+    guardar();
+    mostrarFeedback("Ajuste guardado ✓", "ok");
+  };
+  configCard.querySelector("#sel-meta").onchange = (e) => {
+    p.config = Object.assign({}, p.config, { metaSemanal: parseInt(e.target.value, 10) });
+    guardar();
+    mostrarFeedback("Meta semanal actualizada ✓", "ok");
+  };
+
   const resumen = document.createElement("div");
   resumen.className = "tarjeta-panel";
   resumen.innerHTML = "<h3>Resumen por dominio cognitivo</h3>";
@@ -1286,6 +2460,8 @@ function renderTerapeuta() {
     const nivelMedio = (idsDom.reduce((s, j) => s + nivelDe(j), 0) / idsDom.length).toFixed(1);
     const sesDom = p.sesiones.filter(s => s.d === dom);
     const prec = sesDom.length ? Math.round(sesDom.reduce((s, x) => s + x.a / x.t, 0) / sesDom.length * 100) + "%" : "—";
+    const conSeg = sesDom.filter(s => s.seg);
+    const tiempo = conSeg.length ? (conSeg.reduce((s, x) => s + x.seg, 0) / conSeg.length).toFixed(1) + "s" : "—";
     const fila = document.createElement("div");
     fila.className = "fila-dominio-resumen";
     fila.innerHTML = `
@@ -1293,6 +2469,7 @@ function renderTerapeuta() {
       <div class="fd-dato">Nivel: <b style="color:#eef2f7">${nivelMedio}</b></div>
       <div class="fd-dato">Sesiones: ${sesDom.length}</div>
       <div class="fd-dato">Precisión: ${prec}</div>
+      <div class="fd-dato">Tiempo/ronda: ${tiempo}</div>
       ${sparkline(sesDom)}`;
     resumen.appendChild(fila);
   }
@@ -1326,14 +2503,18 @@ function renderTerapeuta() {
     const filas = p.sesiones.slice(-25).reverse().map(s => {
       const f = new Date(s.f);
       const fecha = f.toLocaleDateString("es") + " " + f.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
-      return `<tr><td>${fecha}</td><td>${JUEGOS[s.j] ? JUEGOS[s.j].icono + " " + JUEGOS[s.j].nombre : s.j}</td><td>Nv. ${s.n}</td><td>${s.a}/${s.t} (${Math.round(s.a / s.t * 100)}%)</td></tr>`;
+      const nombreJ = JUEGOS[s.j] ? JUEGOS[s.j].icono + " " + JUEGOS[s.j].nombre : s.j;
+      return `<tr><td>${fecha}</td><td>${nombreJ}${s.dif ? " ⏰ diferido" : ""}</td><td>Nv. ${s.n}</td><td>${s.a}/${s.t} (${Math.round(s.a / s.t * 100)}%)</td><td>${s.seg || "—"}</td></tr>`;
     }).join("");
-    historial.innerHTML += `<table class="tabla"><tr><th>Fecha</th><th>Juego</th><th>Nivel final</th><th>Aciertos</th></tr>${filas}</table>`;
+    historial.innerHTML += `<table class="tabla"><tr><th>Fecha</th><th>Juego</th><th>Nivel final</th><th>Aciertos</th><th>Seg/ron.</th></tr>${filas}</table>`;
   }
   zona.appendChild(historial);
 
   const acciones = document.createElement("div");
   acciones.className = "navegacion";
+  const bInf = document.createElement("button");
+  bInf.className = "btn"; bInf.textContent = "🖨 Generar informe";
+  bInf.onclick = generarInforme;
   const bExp = document.createElement("button");
   bExp.className = "btn secundario"; bExp.textContent = "⬇ Exportar datos (JSON)";
   bExp.onclick = () => {
@@ -1350,7 +2531,7 @@ function renderTerapeuta() {
       p.perfil = {}; p.sesiones = []; guardar(); renderTerapeuta(); refrescarEstrellas();
     }
   };
-  acciones.append(bExp, bReset);
+  acciones.append(bInf, bExp, bReset);
   zona.appendChild(acciones);
 }
 

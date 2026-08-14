@@ -1,0 +1,17 @@
+{
+  "name": "NeuroJuego - Estimulación cognitiva",
+  "short_name": "NeuroJuego",
+  "description": "Juegos de estimulación cognitiva para adolescentes: memoria, razonamiento, velocidad, lenguaje, visoespacial y cognición social.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a2332",
+  "theme_color": "#1a2332",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
