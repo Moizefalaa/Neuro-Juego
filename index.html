@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroJuego - Estimulación cognitiva</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: linear-gradient(160deg, #1a2332 0%, #232f46 100%);
+    color: #eef2f7; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    user-select: none;
+  }
+  header {
+    width: 100%; padding: 14px 24px; display: flex; align-items: center;
+    justify-content: space-between; background: rgba(0,0,0,0.25); gap: 10px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 1.25rem; letter-spacing: 0.5px; }
+  .header-derecha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .stars { font-size: 1.1rem; background: #33415c; padding: 8px 16px; border-radius: 999px; }
+  .chip { background: #33415c; padding: 8px 16px; border-radius: 999px; border: none; color: #eef2f7; font-size: 0.95rem; cursor: pointer; }
+  .chip:hover { background: #40527a; }
+  main { width: 100%; max-width: 760px; padding: 20px; flex: 1; }
+
+  .screen { display: none; flex-direction: column; align-items: center; gap: 16px; animation: fadeIn 0.35s; }
+  .screen.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .seccion-menu { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .seccion-titulo { font-size: 1rem; color: #9fb4d8; padding-left: 4px; display: flex; align-items: center; gap: 8px; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 12px; width: 100%; }
+  .game-card {
+    border: none; border-radius: 16px; padding: 14px; text-align: left;
+    cursor: pointer; color: #fff; font-size: 1rem; font-weight: 600;
+    display: flex; flex-direction: column; gap: 4px; transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .game-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
+  .game-card .icon { font-size: 1.6rem; }
+  .game-card .nivel { font-size: 0.8rem; margin-top: 4px; background: rgba(0,0,0,0.25); border-radius: 999px; padding: 3px 10px; align-self: flex-start; font-weight: 400; }
+
+  .c-mem { background: linear-gradient(135deg, #7c4dff, #b388ff); }
+  .c-raz { background: linear-gradient(135deg, #00897b, #4db6ac); }
+  .c-vel { background: linear-gradient(135deg, #f4511e, #fb8c00); }
+  .c-ver { background: linear-gradient(135deg, #1e88e5, #64b5f6); }
+  .c-vis { background: linear-gradient(135deg, #d81b60, #f06292); }
+
+  .btn {
+    border: none; border-radius: 14px; padding: 14px 28px; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; background: #ffb300; color: #25210c; transition: transform 0.12s;
+  }
+  .btn:hover { transform: scale(1.05); }
+  .btn.secundario { background: #374771; color: #eef2f7; }
+  .btn.peligro { background: #c62828; color: #fff; }
+  .btn-mini { border: none; border-radius: 10px; width: 38px; height: 38px; font-size: 1.2rem; font-weight: 800; cursor: pointer; background: #374771; color: #eef2f7; }
+  .btn-mini:hover { background: #4a5a86; }
+
+  .instruccion {
+    font-size: 1.15rem; text-align: center; line-height: 1.6;
+    background: #2c3a57; border-radius: 16px; padding: 16px 20px; max-width: 580px;
+  }
+  .btn-audio { background: #2c3a57; color: #9fb4d8; border: none; border-radius: 10px; padding: 6px 14px; cursor: pointer; font-size: 0.9rem; }
+
+  #status-juego { font-size: 1.1rem; color: #9fb4d8; min-height: 1.5em; text-align: center; }
+  .racha { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .punto { width: 13px; height: 13px; border-radius: 50%; background: #374771; transition: background 0.2s, transform 0.2s; }
+  .punto.ok { background: #66bb6a; transform: scale(1.25); }
+  .punto.mal { background: #ef5350; }
+
+  .grid-mem { display: grid; grid-template-columns: repeat(3, 96px); gap: 12px; }
+  .celda-mem {
+    width: 96px; height: 96px; border-radius: 16px; background: #33415c;
+    border: 3px solid #4a5a80; cursor: pointer; transition: background 0.12s, transform 0.12s;
+  }
+  .celda-mem.enciende { background: #b388ff; border-color: #d1c4e9; transform: scale(1.08); box-shadow: 0 0 22px #7c4dff; }
+
+  .numeros-mt { font-size: 3rem; font-weight: 800; letter-spacing: 0.6em; background: #2c3a57; padding: 18px 30px 18px 44px; border-radius: 18px; }
+  .teclado-mt { display: grid; grid-template-columns: repeat(3, 84px); gap: 10px; }
+  .tecla { height: 64px; font-size: 1.6rem; font-weight: 800; border-radius: 14px; border: 3px solid #4a5a80; background: #33415c; color: #eef2f7; cursor: pointer; }
+  .tecla:active { transform: scale(0.93); }
+
+  .grid-emoji { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .celda-emoji { font-size: 2.6rem; background: #2c3a57; border-radius: 16px; width: 86px; height: 86px; display: flex; align-items: center; justify-content: center; }
+  .celda-emoji.incognita { border: 3px dashed #b388ff; font-size: 2.2rem; color: #b388ff; background: transparent; }
+  .op-emoji {
+    font-size: 2.2rem; width: 86px; height: 86px; border-radius: 16px; background: #2c3a57;
+    border: 3px solid #4a5a80; cursor: pointer; transition: transform 0.12s, border-color 0.12s;
+  }
+  .op-emoji:hover { transform: scale(1.08); border-color: #b388ff; }
+
+  .secuencia-raz { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .figura-raz { width: 88px; height: 88px; background: #2c3a57; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+  .figura-raz.interrogante { border: 3px dashed #64b5f6; font-size: 2.2rem; color: #64b5f6; }
+  .flecha-raz { font-size: 1.8rem; color: #9fb4d8; }
+  .grupo-analogia { display: flex; gap: 12px; align-items: center; }
+  .opciones { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .opcion {
+    width: 88px; height: 88px; border-radius: 14px; background: #2c3a57; border: 3px solid #4a5a80;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.12s, border-color 0.12s;
+  }
+  .opcion:hover { transform: scale(1.06); border-color: #64b5f6; }
+
+  .objetivo-vel { font-size: 2.8rem; background: #2c3a57; border-radius: 18px; padding: 12px 28px; border: 3px solid #fb8c00; }
+  .grid-vel { display: grid; grid-template-columns: repeat(5, 72px); gap: 10px; }
+  .celda-vel {
+    width: 72px; height: 72px; font-size: 2rem; border-radius: 14px; background: #33415c;
+    border: 3px solid #4a5a80; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: transform 0.1s, background 0.1s;
+  }
+  .celda-vel:active { transform: scale(0.92); }
+  .celda-vel.fallada { background: #6e2f2d; animation: sacudir 0.3s; }
+  .celda-vel.encontrada { background: #3d6b40; border-color: #81c784; animation: pop 0.25s; }
+  @keyframes sacudir { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  @keyframes pop { 50% { transform: scale(1.15); } }
+
+  .palabra-color { font-size: 2.6rem; font-weight: 800; letter-spacing: 2px; background: #2c3a57; padding: 14px 36px; border-radius: 18px; }
+  .circulos-color { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .circulo-color { width: 92px; height: 92px; border-radius: 50%; border: 4px solid rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.12s; }
+  .circulo-color:hover { transform: scale(1.1); }
+  .pista-tiempo { width: 320px; height: 12px; background: #2c3a57; border-radius: 999px; overflow: hidden; }
+  .pista-relleno { height: 100%; background: #fb8c00; border-radius: 999px; }
+
+  .palabra-ver { font-size: 2.3rem; font-weight: 800; color: #64b5f6; text-align: center; padding: 6px 20px; }
+  .btn-ver {
+    border: 3px solid #4a5a80; background: #2c3a57; color: #eef2f7; border-radius: 14px;
+    padding: 16px 24px; font-size: 1.1rem; font-weight: 600; cursor: pointer; min-width: 240px;
+    transition: transform 0.12s, border-color 0.12s;
+  }
+  .btn-ver:hover { transform: scale(1.04); border-color: #64b5f6; }
+  .columna-opciones { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; }
+
+  .zona-puzzle { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .puzzle-lado { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .puzzle-titulo { font-size: 0.95rem; color: #9fb4d8; }
+  .grid-bloques { display: grid; grid-template-columns: repeat(3, 66px); gap: 6px; }
+  .bloque { width: 66px; height: 66px; border-radius: 10px; background: #33415c; border: 3px solid #4a5a80; cursor: pointer; transition: background 0.12s, transform 0.1s; }
+  .bloque:active { transform: scale(0.92); }
+  .bloque-modelo { width: 66px; height: 66px; border-radius: 10px; background: #33415c; border: 3px solid #4a5a80; }
+  .bloque.activo { background: #f06292; border-color: #f8bbd0; }
+  .bloque-modelo.activo { background: #f06292; border-color: #f8bbd0; }
+  .bloque.bien { background: #3d6b40; border-color: #81c784; }
+  .bloque.mal { background: #6e2f2d; border-color: #ef9a9a; }
+
+  .caja-resultado {
+    text-align: center; background: #2c3a57; border-radius: 20px; padding: 30px;
+    display: flex; flex-direction: column; gap: 14px; align-items: center;
+  }
+  .caja-resultado .emoji-grande { font-size: 4rem; animation: pop 0.4s; }
+  .caja-resultado h2 { font-size: 1.5rem; }
+
+  .perfil-barras { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 520px; }
+  .barra-fila { display: flex; align-items: center; gap: 12px; }
+  .barra-etiqueta { width: 210px; font-size: 0.9rem; text-align: right; }
+  .barra-pista { flex: 1; height: 20px; background: #2c3a57; border-radius: 999px; overflow: hidden; }
+  .barra-relleno { height: 100%; border-radius: 999px; transition: width 0.5s; }
+  .barra-valor { width: 52px; font-weight: 700; font-size: 0.9rem; }
+  .b-mem { background: linear-gradient(90deg, #7c4dff, #b388ff); }
+  .b-raz { background: linear-gradient(90deg, #00897b, #4db6ac); }
+  .b-vel { background: linear-gradient(90deg, #f4511e, #fb8c00); }
+  .b-ver { background: linear-gradient(90deg, #1e88e5, #64b5f6); }
+  .b-vis { background: linear-gradient(90deg, #d81b60, #f06292); }
+
+  .tarjeta-panel { background: #2c3a57; border-radius: 18px; padding: 18px 22px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .tarjeta-panel h3 { font-size: 1.05rem; color: #ffb300; }
+  .tabla { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .tabla th { text-align: left; color: #9fb4d8; padding: 6px 8px; border-bottom: 1px solid #4a5a80; }
+  .tabla td { padding: 7px 8px; border-bottom: 1px solid #374771; }
+  .fila-ajuste { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; }
+  .fila-ajuste .nombre-j { flex: 1; font-size: 0.92rem; }
+  .fila-ajuste .nivel-j { width: 70px; text-align: center; font-weight: 700; color: #ffb300; }
+  .fila-dominio-resumen { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #374771; flex-wrap: wrap; }
+  .fd-nombre { width: 190px; font-size: 0.92rem; }
+  .fd-dato { font-size: 0.85rem; color: #9fb4d8; }
+  .spark { background: transparent; }
+
+  .pac-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; width: 100%; }
+  .pac-card { background: #2c3a57; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; border: 2px solid transparent; }
+  .pac-card.actual { border-color: #ffb300; }
+  .pac-card .pac-nombre { font-size: 1.1rem; font-weight: 700; }
+  .pac-card .pac-info { font-size: 0.85rem; color: #9fb4d8; }
+  .pac-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+  .input-linea { display: flex; gap: 8px; width: 100%; max-width: 380px; }
+  .input-linea input { flex: 1; border-radius: 12px; border: 2px solid #4a5a80; background: #1e293f; color: #eef2f7; padding: 12px 14px; font-size: 1rem; outline: none; }
+  .input-linea input:focus { border-color: #ffb300; }
+
+  .feedback { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-120px);
+    padding: 14px 30px; border-radius: 999px; font-size: 1.15rem; font-weight: 700;
+    transition: transform 0.3s; z-index: 50; }
+  .feedback.mostrar { transform: translateX(-50%) translateY(0); }
+  .feedback.ok { background: #43a047; color: #fff; }
+  .feedback.mal { background: #e53935; color: #fff; }
+  .feedback.subida { background: #ffb300; color: #25210c; }
+
+  .navegacion { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .pie { padding: 14px; color: #6d7f9e; font-size: 0.78rem; text-align: center; }
+  .vacio { color: #9fb4d8; font-size: 0.95rem; padding: 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧠 NeuroJuego</h1>
+  <div class="header-derecha">
+    <div class="stars" id="estrellas-totales">⭐ 0</div>
+    <button class="chip" id="chip-paciente" onclick="irAPacientes()">👤 Paciente</button>
+  </div>
+</header>
+<main>
+
+  <section id="scr-inicio" class="screen active">
+    <div class="instruccion">¡Hola! Elige un juego para entrenar tu mente 🚀</div>
+    <div id="menu" style="display:flex;flex-direction:column;gap:18px;width:100%"></div>
+    <div class="navegacion">
+      <button class="btn secundario" onclick="renderPerfil();mostrarPantalla('scr-perfil')">📊 Ver mi progreso</button>
+      <button class="btn secundario" onclick="irATerapeuta()">🧑‍⚕️ Panel del terapeuta</button>
+    </div>
+  </section>
+
+  <section id="scr-juego" class="screen">
+    <div class="instruccion" id="instruccion-juego"></div>
+    <button class="btn-audio" onclick="leerInstruccion()">🔊 Escuchar instrucción</button>
+    <div id="status-juego"></div>
+    <div class="racha" id="racha"></div>
+    <div id="zona-juego" style="display:flex;flex-direction:column;align-items:center;gap:18px;width:100%"></div>
+    <button class="btn secundario" onclick="volverMenu()">⬅ Volver al menú</button>
+  </section>
+
+  <section id="scr-resultado" class="screen">
+    <div class="caja-resultado">
+      <div class="emoji-grande" id="res-emoji">🏆</div>
+      <h2 id="res-titulo">¡Buen trabajo!</h2>
+      <p id="res-detalle" style="color:#9fb4d8;font-size:1.05rem"></p>
+      <div class="navegacion">
+        <button class="btn" onclick="juegoActual.empezar()">🔁 Jugar otra vez</button>
+        <button class="btn secundario" onclick="volverMenu()">🏠 Menú</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-perfil" class="screen">
+    <h2 style="font-size:1.4rem">📊 Mi progreso</h2>
+    <div class="perfil-barras" id="perfil-barras"></div>
+    <button class="btn secundario" onclick="volverMenu()">⬅ Volver</button>
+  </section>
+
+  <section id="scr-pacientes" class="screen">
+    <h2 style="font-size:1.4rem">👥 Pacientes</h2>
+    <div class="input-linea">
+      <input id="input-nuevo-pac" placeholder="Nombre del nuevo paciente" maxlength="30">
+      <button class="btn secundario" onclick="nuevoPaciente()">➕ Crear</button>
+    </div>
+    <div class="pac-grid" id="pac-grid"></div>
+    <button class="btn secundario" onclick="volverMenu()">⬅ Volver</button>
+  </section>
+
+  <section id="scr-terapeuta" class="screen">
+    <h2 style="font-size:1.4rem">🧑‍⚕️ Panel del terapeuta</h2>
+    <div id="zona-pin" class="tarjeta-panel" style="max-width:420px">
+      <h3>Acceso</h3>
+      <div class="input-linea">
+        <input id="input-pin" type="password" placeholder="PIN (por defecto: 1234)">
+        <button class="btn" onclick="probarPin()">Entrar</button>
+      </div>
+    </div>
+    <div id="zona-panel" style="display:none;flex-direction:column;gap:16px;width:100%"></div>
+    <button class="btn secundario" onclick="volverMenu()">⬅ Volver</button>
+  </section>
+
+</main>
+<div class="pie">NeuroJuego · Herramienta de estimulación cognitiva · Los niveles se ajustan automáticamente al rendimiento</div>
+<div class="feedback" id="feedback"></div>
+
+<script>
+const DOMINIOS = {
+  mem: { nombre: "Memoria de trabajo", icono: "💡" },
+  raz: { nombre: "Razonamiento fluido", icono: "🧩" },
+  vel: { nombre: "Velocidad de procesamiento", icono: "⚡" },
+  ver: { nombre: "Comprensión verbal", icono: "💬" },
+  vis: { nombre: "Visoespacial", icono: "🔄" }
+};
+
+const JUEGOS = {
+  mem1: { dom: "mem", nombre: "Luces de memoria", icono: "💡",
+    instruccion: "Mira qué luces se encienden y repite la misma secuencia tocando las casillas." },
+  mem2: { dom: "mem", nombre: "Números al revés", icono: "🔢",
+    instruccion: "Memoriza los números y luego tócalos en orden AL REVÉS, del último al primero." },
+  mem3: { dom: "mem", nombre: "¿Qué falta?", icono: "❓",
+    instruccion: "Memoriza los dibujos. Uno desaparecerá... ¿cuál es el que falta?" },
+  raz1: { dom: "raz", nombre: "¿Qué viene después?", icono: "🧩",
+    instruccion: "Observa el patrón de las figuras y elige la que sigue." },
+  raz2: { dom: "raz", nombre: "Analogías visuales", icono: "⚖️",
+    instruccion: "La primera figura cambia de la misma forma que el ejemplo. ¿Cómo queda la última?" },
+  vel1: { dom: "vel", nombre: "Búsqueda rápida", icono: "⚡",
+    instruccion: "Encuentra todos los dibujos iguales al de arriba, sin prisa pero sin pausa." },
+  vel2: { dom: "vel", nombre: "Toca el color", icono: "🎨",
+    instruccion: "Lee el nombre del color y toca el círculo de ese color antes de que se acabe la barra." },
+  ver1: { dom: "ver", nombre: "Palabras conectadas", icono: "💬",
+    instruccion: "Elige el grupo al que pertenece la palabra." },
+  ver2: { dom: "ver", nombre: "El intruso", icono: "🔍",
+    instruccion: "Tres palabras van juntas y una no encaja. Toca la palabra intrusa." },
+  ver3: { dom: "ver", nombre: "Palabras parecidas", icono: "🔗",
+    instruccion: "Elige la palabra que significa lo mismo (su sinónimo)." },
+  vis1: { dom: "vis", nombre: "Gira la figura", icono: "🔄",
+    instruccion: "Encuentra la figura que es la MISMA, solo que girada. ¡Cuidado con las reflejadas!" },
+  vis2: { dom: "vis", nombre: "Bloques como el modelo", icono: "🧱",
+    instruccion: "Mira el modelo y construye exactamente el mismo dibujo tocando los bloques. Pulsa Comprobar al terminar." }
+};
+
+const NIVEL_MAX = 10;
+let GEN = 0;
+let juegoActual = null;
+
+function cargarStore() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem("nj_store")); } catch (e) {}
+  if (!s || !s.pacientes) {
+    s = { actual: "p1", pacientes: { p1: { id: "p1", nombre: "Paciente 1", perfil: {}, sesiones: [] } } };
+    localStorage.setItem("nj_store", JSON.stringify(s));
+  }
+  return s;
+}
+let STORE = cargarStore();
+const guardar = () => localStorage.setItem("nj_store", JSON.stringify(STORE));
+const pac = () => STORE.pacientes[STORE.actual];
+function perfilJuego(id) { const p = pac(); p.perfil[id] = p.perfil[id] || { nivel: 1, estrellas: 0 }; return p.perfil[id]; }
+const nivelDe = (id) => perfilJuego(id).nivel;
+function estrellasPaciente() {
+  let t = 0; for (const j in JUEGOS) t += perfilJuego(j).estrellas || 0; return t;
+}
+function refrescarEstrellas() {
+  document.getElementById("estrellas-totales").textContent = "⭐ " + estrellasPaciente();
+  document.getElementById("chip-paciente").textContent = "👤 " + pac().nombre;
+}
+
+function mostrarPantalla(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function volverMenu() {
+  GEN++; speechSynthesis.cancel();
+  if (juegoActual && juegoActual.limpiar) juegoActual.limpiar();
+  construirMenu(); mostrarPantalla("scr-inicio");
+}
+
+function construirMenu() {
+  const menu = document.getElementById("menu");
+  menu.innerHTML = "";
+  for (const [dom, d] of Object.entries(DOMINIOS)) {
+    const seccion = document.createElement("div");
+    seccion.className = "seccion-menu";
+    const titulo = document.createElement("div");
+    titulo.className = "seccion-titulo";
+    const juegosDom = Object.keys(JUEGOS).filter(j => JUEGOS[j].dom === dom);
+    const nivelMedio = Math.round(juegosDom.reduce((s, j) => s + nivelDe(j), 0) / juegosDom.length);
+    titulo.innerHTML = `${d.icono} ${d.nombre} <span style="font-size:0.78rem;background:#33415c;border-radius:999px;padding:2px 10px">nivel medio ${nivelMedio}</span>`;
+    seccion.appendChild(titulo);
+    const grid = document.createElement("div");
+    grid.className = "menu-grid";
+    juegosDom.forEach(id => {
+      const g = JUEGOS[id];
+      const b = document.createElement("button");
+      b.className = "game-card c-" + dom;
+      b.innerHTML = `<span class="icon">${g.icono}</span><span>${g.nombre}</span><span class="nivel">Nivel ${nivelDe(id)}</span>`;
+      b.onclick = () => abrirJuego(id);
+      grid.appendChild(b);
+    });
+    seccion.appendChild(grid);
+    menu.appendChild(seccion);
+  }
+  refrescarEstrellas();
+}
+
+function abrirJuego(id) {
+  const g = JUEGOS[id];
+  document.getElementById("instruccion-juego").textContent = g.instruccion;
+  juegoActual = GAMES[id]();
+  mostrarPantalla("scr-juego");
+  juegoActual.empezar();
+}
+
+function leerInstruccion() {
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(document.getElementById("instruccion-juego").textContent);
+  u.lang = "es-ES"; u.rate = 0.92;
+  speechSynthesis.speak(u);
+}
+
+function dibujarRacha(resultados) {
+  const cont = document.getElementById("racha");
+  cont.innerHTML = "";
+  resultados.forEach(r => {
+    const p = document.createElement("div");
+    p.className = "punto " + (r === "ok" ? "ok" : r === "mal" ? "mal" : "");
+    cont.appendChild(p);
+  });
+}
+
+let audioCtx = null;
+function tono(freq, dur, tipo = "sine", vol = 0.15) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = tipo; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch (e) {}
+}
+const sonidoOk = () => { tono(523, 0.12); setTimeout(() => tono(784, 0.18), 110); };
+const sonidoMal = () => tono(196, 0.3, "triangle", 0.12);
+const sonidoSubida = () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tono(f, 0.15), i * 110)); };
+
+function mostrarFeedback(texto, tipo) {
+  const f = document.getElementById("feedback");
+  f.textContent = texto;
+  f.className = "feedback mostrar " + tipo;
+  setTimeout(() => f.className = "feedback", 1600);
+}
+const ELOGIOS = ["¡Muy bien! 🎉", "¡Excelente! 🌟", "¡Lo lograste! 👏", "¡Genial! 💪", "¡Sí puedes! 🚀"];
+const ANIMOS = ["¡Casi! Inténtalo de nuevo 💪", "No pasa nada, sigue intentando 🙂", "Los errores ayudan a aprender 🌱"];
+const elogio = () => ELOGIOS[Math.floor(Math.random() * ELOGIOS.length)];
+const animo = () => ANIMOS[Math.floor(Math.random() * ANIMOS.length)];
+const mezclar = (arr) => {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+function baraja(items) {
+  let mazo = [];
+  let ultimo = null;
+  return function robar() {
+    if (!mazo.length) {
+      mazo = mezclar(items);
+      if (mazo.length > 1 && mazo[0] === ultimo) mazo.push(mazo.shift());
+    }
+    ultimo = mazo.shift();
+    return ultimo;
+  };
+}
+
+function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
+  const g = JUEGOS[idJuego];
+  const estado = { id: idJuego, dominio: g.dom, nivel: nivelDe(idJuego), aciertosSeguidos: 0, fallosSeguidos: 0, resultados: [], ronda: 0, terminado: false };
+
+  const motor = {
+    estado,
+    zona: () => document.getElementById("zona-juego"),
+    status: (t) => document.getElementById("status-juego").textContent = t,
+    limpiarZona() { this.zona().innerHTML = ""; },
+    limpiar() { if (limpiarFn) limpiarFn(); },
+
+    empezar() {
+      estado.nivel = nivelDe(idJuego);
+      estado.aciertosSeguidos = 0; estado.fallosSeguidos = 0;
+      estado.resultados = []; estado.ronda = 0; estado.terminado = false;
+      GEN++;
+      motor.montar();
+    },
+
+    montar() {
+      const gen = GEN;
+      if (limpiarFn) limpiarFn();
+      motor.limpiarZona();
+      dibujarRacha(estado.resultados);
+      motor.status(`Nivel ${estado.nivel} · Ronda ${estado.ronda + 1} de ${rondas}`);
+      montarRonda(gen, motor);
+    },
+
+    registrar(ok) {
+      if (estado.terminado) return;
+      estado.resultados.push(ok ? "ok" : "mal");
+      dibujarRacha(estado.resultados);
+      if (ok) {
+        estado.aciertosSeguidos++; estado.fallosSeguidos = 0;
+        sonidoOk(); mostrarFeedback(elogio(), "ok");
+      } else {
+        estado.fallosSeguidos++; estado.aciertosSeguidos = 0;
+        sonidoMal(); mostrarFeedback(animo(), "mal");
+      }
+      if (estado.aciertosSeguidos >= 3 && estado.nivel < NIVEL_MAX) {
+        estado.nivel++; estado.aciertosSeguidos = 0;
+        sonidoSubida(); mostrarFeedback("¡Subiste al nivel " + estado.nivel + "! 🎈", "subida");
+      } else if (estado.fallosSeguidos >= 2 && estado.nivel > 1) {
+        estado.nivel--; estado.fallosSeguidos = 0;
+        mostrarFeedback("Vamos con calma, nivel " + estado.nivel + " 🙂", "subida");
+      }
+      estado.ronda++;
+      if (estado.ronda >= rondas) { motor.finalizar(); return; }
+      const gen = GEN;
+      const demora = ok ? 1300 : 2000;
+      setTimeout(() => { if (gen === GEN && !estado.terminado) motor.montar(); }, demora);
+    },
+
+    finalizar() {
+      estado.terminado = true;
+      GEN++;
+      if (limpiarFn) limpiarFn();
+      const aciertos = estado.resultados.filter(r => r === "ok").length;
+      const ganadas = Math.max(1, Math.round(aciertos * estado.nivel / 3));
+      const pf = perfilJuego(idJuego);
+      pf.nivel = estado.nivel;
+      pf.estrellas = (pf.estrellas || 0) + ganadas;
+      pac().sesiones.push({ f: Date.now(), j: idJuego, d: estado.dominio, a: aciertos, t: estado.resultados.length, n: estado.nivel });
+      guardar(); refrescarEstrellas();
+      document.getElementById("res-titulo").textContent = "¡Sesión completada!";
+      document.getElementById("res-detalle").textContent = `${g.nombre} · Acertaste ${aciertos} de ${estado.resultados.length} · Nivel actual: ${estado.nivel} · +${ganadas} ⭐`;
+      document.getElementById("res-emoji").textContent = aciertos >= rondas / 2 ? "🏆" : "🌱";
+      mostrarPantalla("scr-resultado");
+    }
+  };
+  return motor;
+}
+
+const GAMES = {};
+
+GAMES.mem1 = () => crearMotor("mem1", 6, (gen, motor) => {
+  const { estado } = motor;
+  motor.status(`Nivel ${estado.nivel} · ¡memoriza la secuencia!`);
+  const largo = 2 + Math.floor(estado.nivel * 0.7);
+  const secuencia = Array.from({ length: largo }, () => Math.floor(Math.random() * 9));
+  const grid = document.createElement("div");
+  grid.className = "grid-mem";
+  const celdas = [];
+  for (let i = 0; i < 9; i++) {
+    const c = document.createElement("div");
+    c.className = "celda-mem";
+    c.onclick = () => tocar(i);
+    grid.appendChild(c); celdas.push(c);
+  }
+  motor.zona().appendChild(grid);
+  let entrada = [], bloqueado = true, respondido = false;
+
+  secuencia.forEach((pos, i) => {
+    setTimeout(() => {
+      if (gen !== GEN) return;
+      celdas[pos].classList.add("enciende");
+      tono(330 + pos * 55, 0.28);
+      setTimeout(() => celdas[pos].classList.remove("enciende"), 420);
+    }, 800 + i * 620);
+  });
+  setTimeout(() => { if (gen !== GEN) return; bloqueado = false; motor.status("¡Tu turno! Repite la secuencia"); },
+    800 + largo * 620 + 250);
+
+  function tocar(i) {
+    if (bloqueado || respondido) return;
+    celdas[i].classList.add("enciende");
+    tono(330 + i * 55, 0.2);
+    setTimeout(() => celdas[i].classList.remove("enciende"), 220);
+    entrada.push(i);
+    const k = entrada.length - 1;
+    if (secuencia[k] !== i) {
+      respondido = true; bloqueado = true;
+      celdas[i].style.background = "#6e2f2d";
+      motor.registrar(false);
+      return;
+    }
+    if (entrada.length === secuencia.length) {
+      respondido = true; bloqueado = true;
+      motor.registrar(true);
+    }
+  }
+});
+
+GAMES.mem2 = () => crearMotor("mem2", 6, (gen, motor) => {
+  const { estado } = motor;
+  motor.status("Memoriza los números...");
+  const largo = 2 + Math.floor(estado.nivel * 0.6);
+  const nums = Array.from({ length: largo }, () => 1 + Math.floor(Math.random() * 9));
+  const visor = document.createElement("div");
+  visor.className = "numeros-mt";
+  visor.textContent = nums.join(" ");
+  motor.zona().appendChild(visor);
+  const aviso = document.createElement("div");
+  aviso.style.cssText = "color:#9fb4d8;font-size:0.95rem";
+  motor.zona().appendChild(aviso);
+  const teclado = document.createElement("div");
+  teclado.className = "teclado-mt";
+  motor.zona().appendChild(teclado);
+
+  setTimeout(() => {
+    if (gen !== GEN) return;
+    const esperado = nums.slice().reverse();
+    let entrada = 0, respondido = false;
+    const pintar = () => {
+      visor.textContent = nums.map((n, i) => i >= largo - entrada ? n : "•").join(" ");
+    };
+    pintar();
+    motor.status("¡Ahora tócalos AL REVÉS!");
+    aviso.textContent = "Empieza por el último número";
+    for (let d = 1; d <= 9; d++) {
+      const t = document.createElement("button");
+      t.className = "tecla";
+      t.textContent = d;
+      t.onclick = () => {
+        if (gen !== GEN || respondido) return;
+        tono(300 + d * 40, 0.12);
+        if (esperado[entrada] === d) {
+          entrada++;
+          pintar();
+          if (entrada === esperado.length) { respondido = true; motor.registrar(true); }
+        } else {
+          respondido = true;
+          visor.textContent = esperado.join(" ");
+          motor.registrar(false);
+        }
+      };
+      teclado.appendChild(t);
+    }
+  }, 1600 + largo * 800);
+});
+
+GAMES.mem3 = () => {
+  const POOL = ["🍎", "🍌", "🍇", "🍓", "🍑", "🐶", "🐱", "🐰", "🦊", "⭐", "🚗", "🎈", "🐟", "🌻"];
+  const robarSet = baraja(POOL);
+  return crearMotor("mem3", 6, (gen, motor) => {
+    const { estado } = motor;
+    motor.status("Memoriza estos dibujos...");
+    const cantidad = Math.min(6, 3 + Math.floor(estado.nivel / 2));
+    const items = [];
+    const usados = new Set();
+    while (items.length < cantidad) {
+      const it = robarSet();
+      if (!usados.has(it)) { usados.add(it); items.push(it); }
+    }
+    const falta = items[Math.floor(Math.random() * items.length)];
+    const grid = document.createElement("div");
+    grid.className = "grid-emoji";
+    items.forEach(it => {
+      const c = document.createElement("div");
+      c.className = "celda-emoji";
+      c.textContent = it;
+      grid.appendChild(c);
+    });
+    motor.zona().appendChild(grid);
+
+    setTimeout(() => {
+      if (gen !== GEN) return;
+      grid.innerHTML = "";
+      items.forEach(it => {
+        const c = document.createElement("div");
+        c.className = "celda-emoji" + (it === falta ? " incognita" : "");
+        c.textContent = it === falta ? "?" : it;
+        grid.appendChild(c);
+      });
+      motor.status("¿Cuál es el dibujo que falta?");
+      const distractores = mezclar(POOL.filter(p => !usados.has(p))).slice(0, 3);
+      const opciones = mezclar([falta, ...distractores]);
+      let respondido = false;
+      const cont = document.createElement("div");
+      cont.className = "opciones";
+      opciones.forEach(o => {
+        const b = document.createElement("button");
+        b.className = "op-emoji";
+        b.textContent = o;
+        b.onclick = () => {
+          if (respondido) return;
+          respondido = true;
+          motor.registrar(o === falta);
+        };
+        cont.appendChild(b);
+      });
+      motor.zona().appendChild(cont);
+    }, 2200 + cantidad * 600);
+  });
+};
+
+GAMES.raz1 = () => {
+  const colores = ["#4db6ac", "#ffb74d", "#f06292", "#9575cd", "#4fc3f7"];
+  function figuraSVG(nLados, rot, color) {
+    let s;
+    if (nLados === 0) s = `<circle cx="46" cy="46" r="26" fill="${color}"/>`;
+    else {
+      const pts = [];
+      for (let i = 0; i < nLados; i++) {
+        const a = (2 * Math.PI * i / nLados) - Math.PI / 2;
+        pts.push(`${46 + 28 * Math.cos(a)},${46 + 28 * Math.sin(a)}`);
+      }
+      s = `<polygon points="${pts.join(" ")}" fill="${color}"/>`;
+    }
+    return `<svg viewBox="0 0 92 92" width="72" height="72"><g transform="rotate(${rot} 46 46)">${s}<circle cx="46" cy="18" r="5" fill="#fff"/></g></svg>`;
+  }
+  const hacerFicha = (nLados, rot, color) => figuraSVG(nLados, rot, color);
+  return crearMotor("raz1", 6, (gen, motor) => {
+    const tipo = Math.floor(Math.random() * 3);
+    let secuencia, correcta;
+    if (tipo === 0) {
+      const nl = 3 + Math.floor(Math.random() * 5), col = colores[Math.floor(Math.random() * 5)];
+      secuencia = [0, 60, 120].map(g => [nl, g, col]);
+      correcta = [nl, 180, col];
+    } else if (tipo === 1) {
+      const col = colores[Math.floor(Math.random() * 5)];
+      secuencia = [[3, 0, col], [4, 0, col], [5, 0, col]];
+      correcta = [6, 0, col];
+    } else {
+      const nl = 3 + Math.floor(Math.random() * 4);
+      secuencia = [[nl, 0, colores[0]], [nl, 0, colores[1]], [nl, 0, colores[2]]];
+      correcta = [nl, 0, colores[3]];
+    }
+    const contSec = document.createElement("div");
+    contSec.className = "secuencia-raz";
+    secuencia.forEach(f => {
+      const d = document.createElement("div");
+      d.className = "figura-raz";
+      d.innerHTML = hacerFicha(...f);
+      contSec.appendChild(d);
+    });
+    const interrog = document.createElement("div");
+    interrog.className = "figura-raz interrogante";
+    interrog.textContent = "?";
+    contSec.appendChild(interrog);
+    motor.zona().appendChild(contSec);
+
+    const opciones = [correcta];
+    while (opciones.length < 4) {
+      const f = [3 + Math.floor(Math.random() * 5), Math.floor(Math.random() * 6) * 60, colores[Math.floor(Math.random() * 5)]];
+      if (!opciones.some(o => o[0] === f[0] && o[1] === f[1] && o[2] === f[2])) opciones.push(f);
+    }
+    let respondido = false;
+    const contOp = document.createElement("div");
+    contOp.className = "opciones";
+    mezclar(opciones).forEach(f => {
+      const b = document.createElement("button");
+      b.className = "opcion";
+      b.innerHTML = hacerFicha(...f);
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true;
+        const ok = f === correcta;
+        if (!ok) interrog.innerHTML = hacerFicha(...correcta);
+        motor.registrar(ok);
+      };
+      contOp.appendChild(b);
+    });
+    motor.zona().appendChild(contOp);
+  });
+};
+
+GAMES.raz2 = () => {
+  const COLORES = ["#e57373", "#64b5f6", "#81c784", "#ffd54f", "#ba68c8"];
+  function formaSVG(tipo, color, grande) {
+    const r = grande ? 30 : 17;
+    let s;
+    if (tipo === 0) s = `<circle cx="50" cy="50" r="${r}" fill="${color}"/>`;
+    else if (tipo === 1) s = `<rect x="${50 - r}" y="${50 - r}" width="${r * 2}" height="${r * 2}" fill="${color}" rx="4"/>`;
+    else {
+      const pts = `${50},${50 - r} ${50 + r * 0.87},${50 + r * 0.5} ${50 - r * 0.87},${50 + r * 0.5}`;
+      s = `<polygon points="${pts}" fill="${color}"/>`;
+    }
+    return `<svg viewBox="0 0 100 100" width="80" height="80">${s}</svg>`;
+  }
+  return crearMotor("raz2", 6, (gen, motor) => {
+    motor.status("Como cambia la 1ª figura, cambia la última");
+    const tA = Math.floor(Math.random() * 3), tB = (tA + 1 + Math.floor(Math.random() * 2)) % 3;
+    const c1 = COLORES[Math.floor(Math.random() * 5)];
+    let c2 = COLORES[Math.floor(Math.random() * 5)];
+    while (c2 === c1) c2 = COLORES[Math.floor(Math.random() * 5)];
+    const A = { t: tA, c: c1, g: false }, B = { t: tA, c: c2, g: true };
+    const C = { t: tB, c: c1, g: false };
+    const correcta = { t: tB, c: c2, g: true };
+    const clave = o => o.t + "|" + o.c + "|" + o.g;
+    const distractores = [
+      { t: tB, c: c1, g: true },
+      { t: tA, c: c2, g: true },
+      { t: tB, c: c2, g: false }
+    ].filter(d => clave(d) !== clave(correcta));
+    const opciones = mezclar([correcta, ...distractores]);
+
+    const zona = motor.zona();
+    const g1 = document.createElement("div");
+    g1.className = "grupo-analogia";
+    g1.innerHTML = `<div class="figura-raz">${formaSVG(A.t, A.c, A.g)}</div><div class="flecha-raz">➡</div><div class="figura-raz">${formaSVG(B.t, B.c, B.g)}</div>`;
+    const g2 = document.createElement("div");
+    g2.className = "grupo-analogia";
+    g2.innerHTML = `<div class="figura-raz">${formaSVG(C.t, C.c, C.g)}</div><div class="flecha-raz">➡</div><div class="figura-raz interrogante">?</div>`;
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:flex;gap:36px;flex-wrap:wrap;justify-content:center";
+    fila.append(g1, g2);
+    zona.appendChild(fila);
+    const interrog = g2.querySelector(".interrogante");
+
+    let respondido = false;
+    const contOp = document.createElement("div");
+    contOp.className = "opciones";
+    opciones.forEach(o => {
+      const b = document.createElement("button");
+      b.className = "opcion";
+      b.innerHTML = formaSVG(o.t, o.c, o.g);
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true;
+        const ok = clave(o) === clave(correcta);
+        if (!ok) interrog.innerHTML = formaSVG(correcta.t, correcta.c, correcta.g);
+        motor.registrar(ok);
+      };
+      contOp.appendChild(b);
+    });
+    zona.appendChild(contOp);
+  });
+};
+
+GAMES.vel1 = () => {
+  const bancos = [
+    ["🐶", "🐱", "🐰", "🦊", "🐻"],
+    ["🍎", "🍌", "🍇", "🍓", "🍑"],
+    ["🚗", "🚌", "🚲", "✈️", "🚢"],
+    ["⭐", "❤️", "🔵", "🔺", "🔶"],
+    ["🐸", "🐢", "🦋", "🐝", "🐞"]
+  ];
+  const robarBanco = baraja(bancos);
+  return crearMotor("vel1", 6, (gen, motor) => {
+    const { estado } = motor;
+    const banco = robarBanco();
+    const objetivo = banco[Math.floor(Math.random() * banco.length)];
+    const total = Math.min(24, 14 + estado.nivel);
+    const meta = 3 + Math.floor(estado.nivel / 3);
+    const items = [];
+    for (let i = 0; i < meta; i++) items.push(objetivo);
+    while (items.length < total) {
+      const d = banco[Math.floor(Math.random() * banco.length)];
+      if (d !== objetivo) items.push(d);
+    }
+    let restantes = meta, errores = 0, cerrado = false;
+
+    motor.status(`Nivel ${estado.nivel} · Encuentra los ${meta} ${objetivo}`);
+    const caja = document.createElement("div");
+    caja.className = "objetivo-vel";
+    caja.textContent = objetivo;
+    motor.zona().appendChild(caja);
+
+    const grid = document.createElement("div");
+    grid.className = "grid-vel";
+    mezclar(items).forEach(it => {
+      const c = document.createElement("button");
+      c.className = "celda-vel";
+      c.textContent = it;
+      c.onclick = () => {
+        if (cerrado || c.classList.contains("encontrada") || c.classList.contains("fallada")) return;
+        if (it === objetivo) {
+          c.classList.add("encontrada");
+          tono(600 + Math.random() * 200, 0.1);
+          restantes--;
+          motor.status(restantes === 0 ? "¡Todos encontrados!" : `¡Quedan ${restantes}!`);
+          if (restantes === 0) { cerrado = true; motor.registrar(errores <= 1); }
+        } else {
+          c.classList.add("fallada"); errores++;
+        }
+      };
+      grid.appendChild(c);
+    });
+    motor.zona().appendChild(grid);
+  });
+};
+
+GAMES.vel2 = () => {
+  const COLORES = [
+    { n: "ROJO", c: "#e53935" }, { n: "AZUL", c: "#1e88e5" }, { n: "VERDE", c: "#43a047" },
+    { n: "AMARILLO", c: "#fdd835" }, { n: "NARANJA", c: "#fb8c00" }
+  ];
+  let intervalo = null;
+  const limpiarFn = () => clearInterval(intervalo);
+  return crearMotor("vel2", 6, (gen, motor) => {
+    const { estado } = motor;
+    const objetivo = COLORES[Math.floor(Math.random() * COLORES.length)];
+    const nOps = estado.nivel >= 4 ? 5 : 4;
+    let opciones = mezclar(COLORES).slice(0, nOps);
+    if (!opciones.includes(objetivo)) opciones[0] = objetivo;
+
+    const palabra = document.createElement("div");
+    palabra.className = "palabra-color";
+    palabra.textContent = objetivo.n;
+    motor.zona().appendChild(palabra);
+    const pista = document.createElement("div");
+    pista.className = "pista-tiempo";
+    const relleno = document.createElement("div");
+    relleno.className = "pista-relleno";
+    pista.appendChild(relleno);
+    motor.zona().appendChild(pista);
+    const cont = document.createElement("div");
+    cont.className = "circulos-color";
+    let respondido = false;
+    mezclar(opciones).forEach(o => {
+      const b = document.createElement("button");
+      b.className = "circulo-color";
+      b.style.background = o.c;
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true; clearInterval(intervalo);
+        motor.registrar(o === objetivo);
+      };
+      cont.appendChild(b);
+    });
+    motor.zona().appendChild(cont);
+
+    const dur = estado.nivel >= 6 ? 6000 : 8000;
+    const t0 = Date.now();
+    clearInterval(intervalo);
+    intervalo = setInterval(() => {
+      if (gen !== GEN) { clearInterval(intervalo); return; }
+      const pas = Date.now() - t0;
+      relleno.style.width = Math.max(0, 100 - pas / dur * 100) + "%";
+      if (pas >= dur) {
+        clearInterval(intervalo);
+        if (respondido) return;
+        respondido = true;
+        motor.registrar(false);
+      }
+    }, 100);
+  }, limpiarFn);
+};
+
+GAMES.ver1 = () => {
+  const BANCO = [
+    { p: "Manzana", ok: "Frutas", ops: ["Animales", "Colores", "Muebles"] },
+    { p: "Plátano", ok: "Frutas", ops: ["Vehículos", "Ropa", "Deportes"] },
+    { p: "Naranja", ok: "Frutas", ops: ["Instrumentos", "Animales", "Profesiones"] },
+    { p: "Perro", ok: "Animales", ops: ["Frutas", "Vehículos", "Ropa"] },
+    { p: "Gato", ok: "Animales", ops: ["Instrumentos", "Colores", "Vehículos"] },
+    { p: "León", ok: "Animales", ops: ["Frutas", "Muebles", "Colores"] },
+    { p: "Azul", ok: "Colores", ops: ["Frutas", "Deportes", "Instrumentos"] },
+    { p: "Verde", ok: "Colores", ops: ["Ropa", "Frutas", "Profesiones"] },
+    { p: "Silla", ok: "Muebles", ops: ["Animales", "Colores", "Comidas"] },
+    { p: "Mesa", ok: "Muebles", ops: ["Vehículos", "Deportes", "Animales"] },
+    { p: "Fútbol", ok: "Deportes", ops: ["Colores", "Profesiones", "Muebles"] },
+    { p: "Natación", ok: "Deportes", ops: ["Frutas", "Instrumentos", "Colores"] },
+    { p: "Bicicleta", ok: "Vehículos", ops: ["Frutas", "Deportes", "Animales"] },
+    { p: "Autobús", ok: "Vehículos", ops: ["Ropa", "Colores", "Muebles"] },
+    { p: "Guitarra", ok: "Instrumentos", ops: ["Vehículos", "Muebles", "Colores"] },
+    { p: "Tambor", ok: "Instrumentos", ops: ["Frutas", "Deportes", "Ropa"] },
+    { p: "Médico", ok: "Profesiones", ops: ["Frutas", "Colores", "Muebles"] },
+    { p: "Panadero", ok: "Profesiones", ops: ["Animales", "Vehículos", "Instrumentos"] },
+    { p: "Camisa", ok: "Ropa", ops: ["Vehículos", "Deportes", "Animales"] },
+    { p: "Zapato", ok: "Ropa", ops: ["Colores", "Frutas", "Muebles"] }
+  ];
+  const robar = baraja(BANCO);
+  return crearMotor("ver1", 6, (gen, motor) => {
+    const { estado } = motor;
+    const item = robar();
+    const caja = document.createElement("div");
+    caja.className = "palabra-ver";
+    caja.textContent = item.p;
+    motor.zona().appendChild(caja);
+    const nOps = estado.nivel >= 5 ? 4 : 3;
+    const ops = mezclar(item.ops.slice(0, nOps - 1).concat(item.ok));
+    let respondido = false;
+    const cont = document.createElement("div");
+    cont.className = "columna-opciones";
+    ops.forEach(o => {
+      const b = document.createElement("button");
+      b.className = "btn-ver";
+      b.textContent = o;
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true;
+        motor.registrar(o === item.ok);
+      };
+      cont.appendChild(b);
+    });
+    motor.zona().appendChild(cont);
+  });
+};
+
+GAMES.ver2 = () => {
+  const CATEGORIAS = [
+    { cat: "Frutas", items: ["Manzana", "Plátano", "Naranja", "Uva", "Fresa"] },
+    { cat: "Animales", items: ["Perro", "Gato", "Caballo", "Pájaro", "Pez"] },
+    { cat: "Vehículos", items: ["Coche", "Bicicleta", "Avión", "Barco", "Tren"] },
+    { cat: "Colores", items: ["Rojo", "Azul", "Verde", "Amarillo", "Naranja"] },
+    { cat: "Ropa", items: ["Camisa", "Pantalón", "Zapato", "Gorra", "Abrigo"] }
+  ];
+  const robarCat = baraja(CATEGORIAS);
+  return crearMotor("ver2", 6, (gen, motor) => {
+    const { estado } = motor;
+    motor.status(`Nivel ${estado.nivel} · Toca la palabra que NO encaja`);
+    const catA = robarCat();
+    let catB = CATEGORIAS[Math.floor(Math.random() * CATEGORIAS.length)];
+    while (catB === catA) catB = CATEGORIAS[Math.floor(Math.random() * CATEGORIAS.length)];
+    const nOps = estado.nivel >= 6 ? 5 : 4;
+    const dentro = mezclar(catA.items).slice(0, nOps - 1);
+    const intruso = catB.items[Math.floor(Math.random() * catB.items.length)];
+    const ops = mezclar([...dentro, intruso]);
+    let respondido = false;
+    const cont = document.createElement("div");
+    cont.className = "columna-opciones";
+    ops.forEach(o => {
+      const b = document.createElement("button");
+      b.className = "btn-ver";
+      b.textContent = o;
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true;
+        motor.registrar(o === intruso);
+      };
+      cont.appendChild(b);
+    });
+    motor.zona().appendChild(cont);
+  });
+};
+
+GAMES.ver3 = () => {
+  const PARES = [
+    ["Feliz", "Contento"], ["Grande", "Enorme"], ["Bonito", "Hermoso"], ["Rápido", "Veloz"],
+    ["Casa", "Hogar"], ["Coche", "Automóvil"], ["Listo", "Inteligente"], ["Fuerte", "Potente"],
+    ["Callado", "Silencioso"], ["Frío", "Helado"], ["Alumno", "Estudiante"], ["Bonito", "Bello"],
+    ["Doctor", "Médico"], ["Regalo", "Presente"], ["Niño", "Chico"], ["Luchar", "Pelear"]
+  ];
+  const EXTRA = ["Mesita", "Tren", "Nube", "Lámpara", "Zapato", "Silla"];
+  const robar = baraja(PARES);
+  return crearMotor("ver3", 6, (gen, motor) => {
+    const { estado } = motor;
+    motor.status(`Nivel ${estado.nivel} · ¿Qué palabra significa lo mismo?`);
+    const par = robar();
+    const nOps = estado.nivel >= 6 ? 4 : 3;
+    const distractores = mezclar(EXTRA).slice(0, nOps - 1);
+    const ops = mezclar([par[1], ...distractores]);
+    const caja = document.createElement("div");
+    caja.className = "palabra-ver";
+    caja.textContent = par[0];
+    motor.zona().appendChild(caja);
+    let respondido = false;
+    const cont = document.createElement("div");
+    cont.className = "columna-opciones";
+    ops.forEach(o => {
+      const b = document.createElement("button");
+      b.className = "btn-ver";
+      b.textContent = o;
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true;
+        motor.registrar(o === par[1]);
+      };
+      cont.appendChild(b);
+    });
+    motor.zona().appendChild(cont);
+  });
+};
+
+GAMES.vis1 = () => {
+  function poligonoSVG(lados, rot, color, espejo) {
+    const pts = [];
+    for (let i = 0; i < lados; i++) {
+      const a = (2 * Math.PI * i / lados) - Math.PI / 2;
+      let x = 40 * Math.cos(a), y = 40 * Math.sin(a);
+      if (espejo) x = -x;
+      pts.push(`${50 + x},${50 + y}`);
+    }
+    return `<g transform="rotate(${rot} 50 50)"><polygon points="${pts.join(" ")}" fill="${color}"/><circle cx="50" cy="10" r="7" fill="#fff"/></g>`;
+  }
+  const crearSVG = (lados, rot, espejo) =>
+    `<svg viewBox="0 0 100 100" width="106" height="106">${poligonoSVG(lados, rot, "#f06292", espejo)}</svg>`;
+  return crearMotor("vis1", 6, (gen, motor) => {
+    motor.status("¿Cuál es la misma figura girada?");
+    const lados = 3 + Math.floor(Math.random() * 4);
+    const rotBase = Math.floor(Math.random() * 12) * 30;
+    const caja = document.createElement("div");
+    caja.className = "figura-raz";
+    caja.style.cssText = "width:126px;height:126px;border:3px solid #f06292";
+    caja.innerHTML = crearSVG(lados, rotBase, false);
+    const etiqueta = document.createElement("div");
+    etiqueta.textContent = "Esta es la tuya 👇";
+    etiqueta.style.color = "#9fb4d8";
+    const arriba = document.createElement("div");
+    arriba.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:8px";
+    arriba.append(etiqueta, caja);
+    motor.zona().appendChild(arriba);
+
+    const rotCorrecta = (rotBase + 60 + Math.floor(Math.random() * 10) * 30) % 360;
+    const opciones = [{ rot: rotCorrecta, espejo: false, ok: true }];
+    const vistos = new Set([rotCorrecta + "f"]);
+    while (opciones.length < 4) {
+      const espejo = Math.random() < 0.6;
+      const rot = Math.floor(Math.random() * 12) * 30;
+      const clave = rot + (espejo ? "t" : "f");
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      opciones.push({ rot, espejo, ok: false });
+    }
+    let respondido = false;
+    const cont = document.createElement("div");
+    cont.className = "opciones";
+    mezclar(opciones).forEach(o => {
+      const b = document.createElement("button");
+      b.className = "opcion";
+      b.style.cssText = "width:126px;height:126px";
+      b.innerHTML = crearSVG(lados, o.rot, o.espejo);
+      b.onclick = () => {
+        if (respondido) return;
+        respondido = true;
+        motor.registrar(o.ok);
+      };
+      cont.appendChild(b);
+    });
+    motor.zona().appendChild(cont);
+  });
+};
+
+GAMES.vis2 = () => crearMotor("vis2", 6, (gen, motor) => {
+  const { estado } = motor;
+  motor.status(`Nivel ${estado.nivel} · Copia el modelo`);
+  const k = Math.min(9, 2 + Math.ceil(estado.nivel * 0.8));
+  const modelo = new Set();
+  while (modelo.size < k) modelo.add(Math.floor(Math.random() * 9));
+  const zona = motor.zona();
+  const contenedor = document.createElement("div");
+  contenedor.className = "zona-puzzle";
+
+  const ladoM = document.createElement("div");
+  ladoM.className = "puzzle-lado";
+  ladoM.innerHTML = `<div class="puzzle-titulo">Modelo</div>`;
+  const gridM = document.createElement("div");
+  gridM.className = "grid-bloques";
+  for (let i = 0; i < 9; i++) {
+    const b = document.createElement("div");
+    b.className = "bloque-modelo" + (modelo.has(i) ? " activo" : "");
+    gridM.appendChild(b);
+  }
+  ladoM.appendChild(gridM);
+
+  const ladoU = document.createElement("div");
+  ladoU.className = "puzzle-lado";
+  ladoU.innerHTML = `<div class="puzzle-titulo">Tu construcción</div>`;
+  const gridU = document.createElement("div");
+  gridU.className = "grid-bloques";
+  const user = new Set();
+  let comprobado = false;
+  for (let i = 0; i < 9; i++) {
+    const b = document.createElement("button");
+    b.className = "bloque";
+    b.onclick = () => {
+      if (comprobado) return;
+      if (user.has(i)) { user.delete(i); b.classList.remove("activo"); }
+      else { user.add(i); b.classList.add("activo"); tono(440, 0.08); }
+    };
+    gridU.appendChild(b);
+  }
+  ladoU.appendChild(gridU);
+  contenedor.append(ladoM, ladoU);
+  zona.appendChild(contenedor);
+
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "✅ Comprobar";
+  btn.onclick = () => {
+    if (comprobado) return;
+    comprobado = true;
+    const bloques = gridU.children;
+    const exacto = user.size === modelo.size && [...modelo].every(i => user.has(i));
+    for (let i = 0; i < 9; i++) {
+      bloques[i].classList.remove("activo");
+      if (modelo.has(i) && user.has(i)) bloques[i].classList.add("bien");
+      else if (!modelo.has(i) && user.has(i)) bloques[i].classList.add("mal");
+      else if (modelo.has(i) && !user.has(i)) bloques[i].style.border = "3px dashed #f06292";
+    }
+    motor.registrar(exacto);
+  };
+  zona.appendChild(btn);
+});
+
+function renderPerfil() {
+  const cont = document.getElementById("perfil-barras");
+  cont.innerHTML = "";
+  for (const [dom, d] of Object.entries(DOMINIOS)) {
+    const idsDom = Object.keys(JUEGOS).filter(j => JUEGOS[j].dom === dom);
+    idsDom.forEach(id => {
+      const g = JUEGOS[id];
+      const fila = document.createElement("div");
+      fila.className = "barra-fila";
+      const niv = nivelDe(id);
+      fila.innerHTML = `
+        <div class="barra-etiqueta">${g.icono} ${g.nombre}</div>
+        <div class="barra-pista"><div class="barra-relleno b-${dom}" style="width:${niv * 10}%"></div></div>
+        <div class="barra-valor">${niv}/${NIVEL_MAX}</div>`;
+      cont.appendChild(fila);
+    });
+  }
+  refrescarEstrellas();
+}
+
+function irAPacientes() { GEN++; renderPacientes(); mostrarPantalla("scr-pacientes"); }
+
+function renderPacientes() {
+  const grid = document.getElementById("pac-grid");
+  grid.innerHTML = "";
+  Object.values(STORE.pacientes).forEach(p => {
+    const guardado = STORE.actual;
+    STORE.actual = p.id;
+    const estrellas = estrellasPaciente();
+    const ultima = p.sesiones.length ? new Date(p.sesiones[p.sesiones.length - 1].f).toLocaleDateString("es") : "—";
+    STORE.actual = guardado;
+    const card = document.createElement("div");
+    card.className = "pac-card" + (p.id === STORE.actual ? " actual" : "");
+    card.innerHTML = `
+      <div class="pac-nombre">${p.id === STORE.actual ? "▶ " : ""}${p.nombre}</div>
+      <div class="pac-info">⭐ ${estrellas} · ${p.sesiones.length} sesiones · Última: ${ultima}</div>
+      <div class="pac-acciones">
+        <button class="btn secundario" style="padding:8px 16px;font-size:0.9rem">✔ Usar</button>
+        <button class="btn secundario" style="padding:8px 16px;font-size:0.9rem">✏️ Renombrar</button>
+        ${Object.keys(STORE.pacientes).length > 1 ? '<button class="btn peligro" style="padding:8px 16px;font-size:0.9rem">🗑</button>' : ""}
+      </div>`;
+    const botones = card.querySelectorAll("button");
+    botones[0].onclick = () => { STORE.actual = p.id; guardar(); volverMenu(); };
+    botones[1].onclick = () => {
+      const n = prompt("Nuevo nombre:", p.nombre);
+      if (n && n.trim()) { p.nombre = n.trim(); guardar(); renderPacientes(); refrescarEstrellas(); }
+    };
+    if (botones[2]) botones[2].onclick = () => {
+      if (confirm(`¿Eliminar a ${p.nombre} y todo su progreso?`)) {
+        delete STORE.pacientes[p.id];
+        if (STORE.actual === p.id) STORE.actual = Object.keys(STORE.pacientes)[0];
+        guardar(); renderPacientes(); refrescarEstrellas();
+      }
+    };
+    grid.appendChild(card);
+  });
+}
+
+function nuevoPaciente() {
+  const input = document.getElementById("input-nuevo-pac");
+  const nombre = input.value.trim();
+  if (!nombre) { input.focus(); return; }
+  const id = "p" + Date.now();
+  STORE.pacientes[id] = { id, nombre, perfil: {}, sesiones: [] };
+  STORE.actual = id;
+  guardar(); input.value = "";
+  renderPacientes(); refrescarEstrellas();
+}
+
+let pinOk = false;
+function irATerapeuta() {
+  GEN++;
+  if (juegoActual && juegoActual.limpiar) juegoActual.limpiar();
+  document.getElementById("zona-pin").style.display = pinOk ? "none" : "flex";
+  document.getElementById("zona-panel").style.display = pinOk ? "flex" : "none";
+  if (pinOk) renderTerapeuta();
+  mostrarPantalla("scr-terapeuta");
+}
+function probarPin() {
+  const pin = localStorage.getItem("nj_pin") || "1234";
+  if (document.getElementById("input-pin").value === pin) {
+    pinOk = true;
+    document.getElementById("input-pin").value = "";
+    document.getElementById("zona-pin").style.display = "none";
+    document.getElementById("zona-panel").style.display = "flex";
+    renderTerapeuta();
+  } else {
+    mostrarFeedback("PIN incorrecto", "mal");
+  }
+}
+
+function sparkline(sesionesDom) {
+  const ult = sesionesDom.slice(-12);
+  if (ult.length < 2) return `<span class="vacio">—</span>`;
+  const w = 110, h = 28;
+  const pts = ult.map((s, i) => {
+    const x = (i / (ult.length - 1)) * (w - 6) + 3;
+    const y = h - 3 - (s.a / s.t) * (h - 6);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg class="spark" width="${w}" height="${h}"><polyline points="${pts}" fill="none" stroke="#ffb300" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+
+function renderTerapeuta() {
+  const p = pac();
+  const zona = document.getElementById("zona-panel");
+  zona.innerHTML = "";
+
+  const cab = document.createElement("div");
+  cab.className = "tarjeta-panel";
+  cab.style.cssText = "flex-direction:row;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px";
+  const nivProm = Math.round(Object.keys(JUEGOS).reduce((s, j) => s + nivelDe(j), 0) / Object.keys(JUEGOS).length);
+  cab.innerHTML = `<div><span style="font-weight:700;font-size:1.1rem">👤 ${p.nombre}</span>
+    <span class="fd-dato" style="margin-left:12px">${p.sesiones.length} sesiones · ⭐ ${estrellasPaciente()} · nivel global ${nivProm}/10</span></div>
+    <button class="btn secundario" style="padding:8px 16px;font-size:0.9rem" id="btn-ir-pac">Cambiar paciente</button>`;
+  zona.appendChild(cab);
+  cab.querySelector("#btn-ir-pac").onclick = irAPacientes;
+
+  const resumen = document.createElement("div");
+  resumen.className = "tarjeta-panel";
+  resumen.innerHTML = "<h3>Resumen por dominio cognitivo</h3>";
+  for (const [dom, d] of Object.entries(DOMINIOS)) {
+    const idsDom = Object.keys(JUEGOS).filter(j => JUEGOS[j].dom === dom);
+    const nivelMedio = (idsDom.reduce((s, j) => s + nivelDe(j), 0) / idsDom.length).toFixed(1);
+    const sesDom = p.sesiones.filter(s => s.d === dom);
+    const prec = sesDom.length ? Math.round(sesDom.reduce((s, x) => s + x.a / x.t, 0) / sesDom.length * 100) + "%" : "—";
+    const fila = document.createElement("div");
+    fila.className = "fila-dominio-resumen";
+    fila.innerHTML = `
+      <div class="fd-nombre">${d.icono} ${d.nombre}</div>
+      <div class="fd-dato">Nivel: <b style="color:#eef2f7">${nivelMedio}</b></div>
+      <div class="fd-dato">Sesiones: ${sesDom.length}</div>
+      <div class="fd-dato">Precisión: ${prec}</div>
+      ${sparkline(sesDom)}`;
+    resumen.appendChild(fila);
+  }
+  zona.appendChild(resumen);
+
+  const ajustes = document.createElement("div");
+  ajustes.className = "tarjeta-panel";
+  ajustes.innerHTML = "<h3>Ajuste manual de niveles</h3>";
+  for (const [id, g] of Object.entries(JUEGOS)) {
+    const fila = document.createElement("div");
+    fila.className = "fila-ajuste";
+    fila.innerHTML = `<span class="nombre-j">${g.icono} ${g.nombre} <span class="fd-dato">(${DOMINIOS[g.dom].nombre})</span></span>
+      <span class="nivel-j">Nivel ${nivelDe(id)}</span>`;
+    const bMenos = document.createElement("button");
+    bMenos.className = "btn-mini"; bMenos.textContent = "−";
+    bMenos.onclick = () => { const pf = perfilJuego(id); pf.nivel = Math.max(1, pf.nivel - 1); guardar(); renderTerapeuta(); };
+    const bMas = document.createElement("button");
+    bMas.className = "btn-mini"; bMas.textContent = "+";
+    bMas.onclick = () => { const pf = perfilJuego(id); pf.nivel = Math.min(NIVEL_MAX, pf.nivel + 1); guardar(); renderTerapeuta(); };
+    fila.prepend(bMenos); fila.append(bMas);
+    ajustes.appendChild(fila);
+  }
+  zona.appendChild(ajustes);
+
+  const historial = document.createElement("div");
+  historial.className = "tarjeta-panel";
+  historial.innerHTML = "<h3>Historial de sesiones (últimas 25)</h3>";
+  if (!p.sesiones.length) {
+    historial.innerHTML += '<div class="vacio">Sin sesiones todavía</div>';
+  } else {
+    const filas = p.sesiones.slice(-25).reverse().map(s => {
+      const f = new Date(s.f);
+      const fecha = f.toLocaleDateString("es") + " " + f.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+      return `<tr><td>${fecha}</td><td>${JUEGOS[s.j] ? JUEGOS[s.j].icono + " " + JUEGOS[s.j].nombre : s.j}</td><td>Nv. ${s.n}</td><td>${s.a}/${s.t} (${Math.round(s.a / s.t * 100)}%)</td></tr>`;
+    }).join("");
+    historial.innerHTML += `<table class="tabla"><tr><th>Fecha</th><th>Juego</th><th>Nivel final</th><th>Aciertos</th></tr>${filas}</table>`;
+  }
+  zona.appendChild(historial);
+
+  const acciones = document.createElement("div");
+  acciones.className = "navegacion";
+  const bExp = document.createElement("button");
+  bExp.className = "btn secundario"; bExp.textContent = "⬇ Exportar datos (JSON)";
+  bExp.onclick = () => {
+    const blob = new Blob([JSON.stringify(STORE, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "neurojuego-datos.json";
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  const bReset = document.createElement("button");
+  bReset.className = "btn peligro"; bReset.textContent = "♻ Reiniciar progreso del paciente";
+  bReset.onclick = () => {
+    if (confirm(`¿Reiniciar todo el progreso de ${p.nombre}?`)) {
+      p.perfil = {}; p.sesiones = []; guardar(); renderTerapeuta(); refrescarEstrellas();
+    }
+  };
+  acciones.append(bExp, bReset);
+  zona.appendChild(acciones);
+}
+
+construirMenu();
+</script>
+</body>
+</html>
