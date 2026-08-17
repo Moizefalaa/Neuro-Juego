@@ -234,6 +234,16 @@
   .feedback.mal { background: #e53935; color: #fff; }
   .feedback.subida { background: #ffb300; color: #25210c; }
 
+  #aviso-update {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(140px);
+    display: flex; align-items: center; gap: 12px;
+    background: #ffb300; color: #25210c; border-radius: 999px;
+    padding: 8px 10px 8px 20px; font-weight: 700; font-size: 0.95rem;
+    transition: transform 0.3s; z-index: 60; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  #aviso-update.mostrar { transform: translateX(-50%) translateY(0); }
+  #aviso-update .btn-mini { background: #25210c; color: #ffb300; }
+
   .navegacion { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   .pie { padding: 14px; color: #6d7f9e; font-size: 0.78rem; text-align: center; }
   .vacio { color: #9fb4d8; font-size: 0.95rem; padding: 8px 0; }
@@ -422,6 +432,10 @@
 </main>
 <div class="pie">NeuroJuego · Herramienta de estimulación cognitiva · Los niveles se ajustan automáticamente al rendimiento</div>
 <div class="feedback" id="feedback"></div>
+<div id="aviso-update">
+  <span>✨ ¡Nueva versión disponible!</span>
+  <button class="btn-mini" onclick="skipWaitingAplicar()">Actualizar</button>
+</div>
 <div id="informe-print"></div>
 
 <script>
@@ -790,7 +804,21 @@ construirMenu();
 
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      reg.addEventListener("updatefound", () => {
+        const nuevo = reg.installing;
+        if (!nuevo) return;
+        nuevo.addEventListener("statechange", () => {
+          if (nuevo.state === "installed" && navigator.serviceWorker.controller) {
+            const aviso = document.getElementById("aviso-update");
+            aviso.classList.add("mostrar");
+          }
+        });
+      });
+    }).catch(() => {});
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      window.location.reload();
+    });
   });
 }
     mostrarPantalla("scr-resultado");
@@ -837,6 +865,13 @@ function mostrarFeedback(texto, tipo) {
   f.textContent = texto;
   f.className = "feedback mostrar " + tipo;
   setTimeout(() => f.className = "feedback", 1600);
+}
+function skipWaitingAplicar() {
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ tipo: "SKIP_WAITING" });
+  } else {
+    window.location.reload();
+  }
 }
 const ELOGIOS = ["¡Muy bien! 🎉", "¡Excelente! 🌟", "¡Lo lograste! 👏", "¡Genial! 💪", "¡Sí puedes! 🚀"];
 const ANIMOS = ["¡Casi! Inténtalo de nuevo 💪", "No pasa nada, sigue intentando 🙂", "Los errores ayudan a aprender 🌱"];
