@@ -1,4 +1,8 @@
-const CACHE = "neurojuego-v2";
+const CACHE = "neurojuego-v3";
+
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.tipo === "SKIP_WAITING") self.skipWaiting();
+});
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
