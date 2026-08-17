@@ -496,6 +496,54 @@ function cargarStore() {
 let STORE = cargarStore();
 const guardar = () => localStorage.setItem("nj_store", JSON.stringify(STORE));
 
+const CLOUD = JSON.parse(localStorage.getItem("nj_cloud") || '{"url":"","key":""}');
+const guardarCloud = () => localStorage.setItem("nj_cloud", JSON.stringify(CLOUD));
+let COLA = [];
+try { COLA = JSON.parse(localStorage.getItem("nj_cola") || "[]"); } catch (e) {}
+const guardarCola = () => localStorage.setItem("nj_cola", JSON.stringify(COLA));
+const nubeActiva = () => !!(CLOUD.url && CLOUD.key);
+const nubeBase = () => CLOUD.url.replace(/\/+$/, "");
+
+async function enviarNube(sesion, paciente) {
+  if (!nubeActiva()) return;
+  const reg = {
+    paciente, juego: sesion.j, dominio: sesion.d,
+    aciertos: sesion.a, rondas: sesion.t, nivel: sesion.n,
+    seg: sesion.seg != null ? sesion.seg : null, fecha: sesion.f
+  };
+  try {
+    const res = await fetch(nubeBase() + "/rest/v1/progreso", {
+      method: "POST",
+      headers: { "apikey": CLOUD.key, "Authorization": "Bearer " + CLOUD.key, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify(reg)
+    });
+    if (!res.ok) throw new Error("http " + res.status);
+  } catch (e) {
+    COLA.push(reg); guardarCola();
+  }
+}
+
+async function vaciarCola() {
+  if (!nubeActiva() || !COLA.length) return;
+  const pendientes = COLA.splice(0, COLA.length);
+  guardarCola();
+  let ok = true;
+  for (const reg of pendientes) {
+    try {
+      const res = await fetch(nubeBase() + "/rest/v1/progreso", {
+        method: "POST",
+        headers: { "apikey": CLOUD.key, "Authorization": "Bearer " + CLOUD.key, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify(reg)
+      });
+      if (!res.ok) throw new Error("http " + res.status);
+    } catch (e) { ok = false; COLA.push(reg); }
+  }
+  guardarCola();
+  if (ok && pendientes.length) mostrarFeedback("☁️ " + pendientes.length + " registros sincronizados", "ok");
+}
+window.addEventListener("online", vaciarCola);
+window.addEventListener("load", vaciarCola);
+
 const ACC = JSON.parse(localStorage.getItem("nj_accesibilidad") || '{"grande":false,"contraste":false}');
 function aplicarAccesibilidad() {
   document.body.classList.toggle("accesible", !!ACC.grande);
@@ -895,6 +943,7 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
       pac().sesiones.push(sesion);
       checkMetaSemana();
       guardar(); refrescarEstrellas();
+      enviarNube(sesion, pac().nombre);
       document.getElementById("res-titulo").textContent = "¡Sesión completada!";
       document.getElementById("res-detalle").textContent = `${g.nombre} · Acertaste ${aciertos} de ${estado.resultados.length} · Nivel actual: ${estado.nivel} · +${ganadas} ⭐`;
       document.getElementById("res-emoji").textContent = aciertos >= rondas / 2 ? "🏆" : "🌱";
@@ -1081,10 +1130,17 @@ GAMES.mem4 = () => crearMotor("mem4", 1, (gen, motor) => {
     c.className = "celda-emoji";
     c.textContent = "🧠";
     grid.appendChild(c);
-    motor.status("¡Guardadas! Sigue jugando... te preguntaremos en unos minutos 😉");
-    STORE.pendiente = { items, creado: Date.now(), listo: Date.now() + 5 * 60 * 1000 };
-    guardar();
-    setTimeout(() => { if (gen === GEN) motor.registrar(true); }, 1800);
+    motor.status("¡Guardadas! Cuando las tengas en la cabeza, pulsa el botón 👇");
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.textContent = "✅ ¡Las recordé!";
+    btn.onclick = () => {
+      if (gen !== GEN) return;
+      STORE.pendiente = { items, creado: Date.now(), listo: Date.now() + 5 * 60 * 1000 };
+      guardar();
+      motor.registrar(true);
+    };
+    motor.zona().appendChild(btn);
   }, dur);
 });
 
@@ -2509,6 +2565,72 @@ function renderTerapeuta() {
     historial.innerHTML += `<table class="tabla"><tr><th>Fecha</th><th>Juego</th><th>Nivel final</th><th>Aciertos</th><th>Seg/ron.</th></tr>${filas}</table>`;
   }
   zona.appendChild(historial);
+
+  const nube = document.createElement("div");
+  nube.className = "tarjeta-panel";
+  nube.innerHTML = `<h3>☁️ Sincronización en la nube (Supabase)</h3>
+    <div class="fila-ajuste">
+      <span class="nombre-j">URL del proyecto (https://xxxx.supabase.co)</span>
+      <input id="nub-url" class="sel-panel" style="width:100%;box-sizing:border-box" value="${CLOUD.url}" placeholder="https://xxxx.supabase.co">
+    </div>
+    <div class="fila-ajuste">
+      <span class="nombre-j">Clave anon (anon key)</span>
+      <input id="nub-key" class="sel-panel" style="width:100%;box-sizing:border-box" value="${CLOUD.key}" placeholder="eyJhbGciOiJIUzI1NiIs...">
+    </div>
+    <div class="navegacion" style="justify-content:flex-start">
+      <button class="btn" id="nub-guardar">💾 Guardar y probar</button>
+      <button class="btn secundario" id="nub-enviar">☁️ Enviar pendientes (${COLA.length})</button>
+      <button class="btn secundario" id="nub-ver">📡 Ver registros remotos</button>
+    </div>
+    <div id="nub-salida" class="vacio"></div>`;
+  zona.appendChild(nube);
+  nube.querySelector("#nub-guardar").onclick = async () => {
+    CLOUD.url = document.getElementById("nub-url").value.trim();
+    CLOUD.key = document.getElementById("nub-key").value.trim();
+    guardarCloud();
+    const out = document.getElementById("nub-salida");
+    if (!nubeActiva()) { out.textContent = "Escribe la URL y la clave antes de guardar."; return; }
+    out.textContent = "Probando conexión…";
+    try {
+      const res = await fetch(nubeBase() + "/rest/v1/progreso?select=id&limit=1", {
+        headers: { "apikey": CLOUD.key, "Authorization": "Bearer " + CLOUD.key }
+      });
+      if (res.ok) {
+        out.textContent = "✅ Conexión correcta. Los registros se subirán automáticamente. Pendientes por enviar: " + COLA.length + ".";
+        vaciarCola();
+      } else {
+        out.textContent = "❌ Error " + res.status + ". Revisa URL y clave. ¿Activaste la tabla y las políticas? (mira las instrucciones)";
+      }
+    } catch (e) {
+      out.textContent = "❌ No se pudo conectar. ¿Estás online?";
+    }
+  };
+  nube.querySelector("#nub-enviar").onclick = async () => {
+    await vaciarCola();
+    document.getElementById("nub-salida").textContent = COLA.length ? "Quedan " + COLA.length + " sin enviar (¿conexión?)." : "Todo enviado ✓";
+  };
+  nube.querySelector("#nub-ver").onclick = async () => {
+    const out = document.getElementById("nub-salida");
+    if (!nubeActiva()) { out.textContent = "Configura primero la URL y la clave."; return; }
+    out.textContent = "Cargando…";
+    try {
+      const res = await fetch(nubeBase() + "/rest/v1/progreso?select=paciente,juego,dominio,aciertos,rondas,nivel,seg,fecha&order=fecha.desc&limit=100", {
+        headers: { "apikey": CLOUD.key, "Authorization": "Bearer " + CLOUD.key }
+      });
+      if (!res.ok) throw new Error("http " + res.status);
+      const datos = await res.json();
+      if (!datos.length) { out.textContent = "No hay registros en la nube todavía."; return; }
+      const filas = datos.slice(0, 30).map(r => {
+        const nombreJ = JUEGOS[r.juego] ? JUEGOS[r.juego].icono + " " + JUEGOS[r.juego].nombre : r.juego;
+        const f = new Date(r.fecha);
+        return `<tr><td>${r.paciente}</td><td>${f.toLocaleDateString("es")} ${f.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}</td><td>${nombreJ}</td><td>${r.nivel}</td><td>${r.aciertos}/${r.rondas}</td><td>${r.seg || "—"}</td></tr>`;
+      }).join("");
+      out.innerHTML = `<div style="margin-top:10px">📡 ${datos.length} registros en la nube (últimos 30):</div>
+        <table class="tabla"><tr><th>Paciente</th><th>Fecha</th><th>Juego</th><th>Nivel</th><th>Aciertos</th><th>Seg/ron.</th></tr>${filas}</table>`;
+    } catch (e) {
+      out.textContent = "❌ No se pudo consultar la nube (" + e.message + ")";
+    }
+  };
 
   const acciones = document.createElement("div");
   acciones.className = "navegacion";
