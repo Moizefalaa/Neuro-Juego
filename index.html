@@ -915,6 +915,7 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
       estado.aciertosSeguidos = 0; estado.fallosSeguidos = 0;
       estado.resultados = []; estado.ronda = 0; estado.terminado = false;
       GEN++;
+      mostrarPantalla("scr-juego");
       motor.montar();
     },
 
