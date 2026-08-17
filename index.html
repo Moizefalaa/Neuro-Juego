@@ -909,12 +909,6 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
       if (MODO_TEST && MODO_TEST.escaleraTest) {
         if (ok && estado.nivel < NIVEL_MAX) estado.nivel++;
         if (!ok && estado.nivel > 1) estado.nivel--;
-      } else if (estado.aciertosSeguidos >= 3 && estado.nivel < NIVEL_MAX) {
-        estado.nivel++; estado.aciertosSeguidos = 0;
-        sonidoSubida(); mostrarFeedback("¡Subiste al nivel " + estado.nivel + "! 🎈", "subida");
-      } else if (estado.fallosSeguidos >= 2 && estado.nivel > 1) {
-        estado.nivel--; estado.fallosSeguidos = 0;
-        mostrarFeedback("Vamos con calma, nivel " + estado.nivel + " 🙂", "subida");
       }
       estado.ronda++;
       const limite = MODO_TEST ? Math.min(rondas, 4) : rondas;
@@ -934,19 +928,30 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
         return;
       }
       const segMedia = estado.tiempos.length ? +(estado.tiempos.reduce((a, b) => a + b, 0) / estado.tiempos.length).toFixed(1) : null;
+      const total = estado.resultados.length;
+      const prec = total ? aciertos / total : 0;
+      let nuevoNivel = estado.nivel;
+      if (total >= 3) {
+        if (prec >= 0.75 && estado.nivel < NIVEL_MAX) nuevoNivel = estado.nivel + 1;
+        else if (prec <= 0.4 && estado.nivel > 1) nuevoNivel = estado.nivel - 1;
+      }
+      const subio = nuevoNivel > estado.nivel, bajo = nuevoNivel < estado.nivel;
+      estado.nivel = nuevoNivel;
       const ganadas = Math.max(1, Math.round(aciertos * estado.nivel / 3));
       const pf = perfilJuego(idJuego);
       pf.nivel = estado.nivel;
       pf.estrellas = (pf.estrellas || 0) + ganadas;
-      const sesion = { f: Date.now(), j: idJuego, d: estado.dominio, a: aciertos, t: estado.resultados.length, n: estado.nivel, seg: segMedia };
+      const sesion = { f: Date.now(), j: idJuego, d: estado.dominio, a: aciertos, t: total, n: estado.nivel, seg: segMedia };
       if (extraSesion) Object.assign(sesion, extraSesion);
       pac().sesiones.push(sesion);
       checkMetaSemana();
       guardar(); refrescarEstrellas();
       enviarNube(sesion, pac().nombre);
-      document.getElementById("res-titulo").textContent = "¡Sesión completada!";
-      document.getElementById("res-detalle").textContent = `${g.nombre} · Acertaste ${aciertos} de ${estado.resultados.length} · Nivel actual: ${estado.nivel} · +${ganadas} ⭐`;
-      document.getElementById("res-emoji").textContent = aciertos >= rondas / 2 ? "🏆" : "🌱";
+      if (subio) sonidoSubida();
+      const notaNivel = subio ? ` ¡Subiste al nivel ${estado.nivel}! 🎈` : bajo ? ` El nivel bajó a ${estado.nivel} 🙂` : "";
+      document.getElementById("res-titulo").textContent = subio ? "¡Subiste de nivel! 🎉" : "¡Sesión completada!";
+      document.getElementById("res-detalle").textContent = `${g.nombre} · Acertaste ${aciertos} de ${total} · Nivel actual: ${estado.nivel} · +${ganadas} ⭐${notaNivel}`;
+      document.getElementById("res-emoji").textContent = subio ? "🚀" : aciertos >= rondas / 2 ? "🏆" : "🌱";
       mostrarPantalla("scr-resultado");
     }
   };
@@ -1322,7 +1327,7 @@ GAMES.raz3 = () => {
     const { estado } = motor;
     const nDiscos = estado.nivel <= 2 ? 2 : estado.nivel <= 5 ? 3 : 4;
     const optimo = Math.pow(2, nDiscos) - 1;
-    const margen = estado.nivel >= 9 ? 1 : 3;
+    const margen = nDiscos + 1;
     const maxMov = optimo + margen;
     motor.status(`Lleva la torre al poste derecho · Máximo ${maxMov} movimientos`);
 
@@ -1526,9 +1531,9 @@ GAMES.vel3 = () => {
     const palabra = COLORES[Math.floor(Math.random() * COLORES.length)];
     let tinta = COLORES[Math.floor(Math.random() * COLORES.length)];
     while (tinta === palabra) tinta = COLORES[Math.floor(Math.random() * COLORES.length)];
-    const nOps = estado.nivel >= 4 ? 5 : 4;
-    let opciones = mezclar(COLORES.filter(c => c !== palabra)).slice(0, nOps - 1);
-    opciones.push(tinta);
+    const nOps = estado.nivel >= 4 ? 4 : 3;
+    const otros = mezclar(COLORES.filter(c => c !== palabra && c !== tinta)).slice(0, nOps - 1);
+    const opciones = mezclar([tinta, ...otros]);
 
     motor.status("¡Toca el color de las LETRAS, no lo que dice!");
     const caja = document.createElement("div");
@@ -1825,11 +1830,59 @@ GAMES.ver4 = () => {
         { q: "¿Qué colecciona Diego?", ok: "Piedras", ops: ["Estampillas", "Monedas"] },
         { q: "¿Dónde encontró la piedra brillante?", ok: "En la playa", ops: ["En el colegio", "En el patio"] },
         { q: "¿Cómo la mostró?", ok: "Con cuidado", ops: ["La escondió", "La tiró"] }
+      ] },
+    { dif: 1, t: "Valentina fue a la panadería con su abuela. Compraron un pan y unas galletas. Al volver, compartieron las galletas con el té de la tarde.",
+      qs: [
+        { q: "¿A dónde fueron?", ok: "A la panadería", ops: ["Al hospital", "A la escuela"] },
+        { q: "¿Con quién fue Valentina?", ok: "Con su abuela", ops: ["Con su prima", "Con su tío"] },
+        { q: "¿Qué compartieron?", ok: "Las galletas", ops: ["El pan", "Las frutas"] }
+      ] },
+    { dif: 1, t: "En la clase de arte, los niños usaron pintura de colores. Cada uno pintó un animal. Julia pintó un gato y lo pegó en la pared.",
+      qs: [
+        { q: "¿Qué usaron en la clase de arte?", ok: "Pintura de colores", ops: ["Plastilina", "Arena"] },
+        { q: "¿Qué pintó Julia?", ok: "Un gato", ops: ["Un perro", "Un pez"] },
+        { q: "¿Dónde lo pegó?", ok: "En la pared", ops: ["En el suelo", "En su mochila"] }
+      ] },
+    { dif: 2, t: "Rafael quería un perro desde hace años. En su cumpleaños, sus papás le dieron una caja con un moño. Al abrirla, un cachorro salió corriendo. Rafael saltó de alegría.",
+      qs: [
+        { q: "¿Qué quería Rafael?", ok: "Un perro", ops: ["Una bicicleta", "Un celular"] },
+        { q: "¿Qué había dentro de la caja?", ok: "Un cachorro", ops: ["Un reloj", "Unos zapatos"] },
+        { q: "¿Cómo se sintió Rafael?", ok: "Muy feliz", ops: ["Asustado", "Triste"] }
+      ] },
+    { dif: 2, t: "Iba a llover y Carla no llevaba paraguas. Cuando salió de la escuela, empezó a llover fuerte. Un compañero compartió su paraguas y llegó a casa sin mojarse.",
+      qs: [
+        { q: "¿Qué iba a pasar?", ok: "Iba a llover", ops: ["Iba a nevar", "Hacía mucho calor"] },
+        { q: "¿Qué le pasó a Carla al salir?", ok: "Empezó a llover", ops: ["Perdió su mochila", "Llegó tarde"] },
+        { q: "¿Quién la ayudó?", ok: "Un compañero", ops: ["Su mamá", "Un desconocido"] }
+      ] },
+    { dif: 3, t: "El equipo de Nicolás perdía el partido por un gol. Faltando poco tiempo, Nicolás recibió la pelota y anotó el gol del empate. Todos sus compañeros lo felicitaron y lo levantaron en el aire.",
+      qs: [
+        { q: "¿Cómo iba el equipo de Nicolás?", ok: "Perdía por un gol", ops: ["Ganaba", "Empataba"] },
+        { q: "¿Qué hizo Nicolás?", ok: "Anotó el gol del empate", ops: ["Se lesionó", "Le pegaron al árbitro"] },
+        { q: "¿Cómo celebraron sus compañeros?", ok: "Lo felicitaron y lo levantaron", ops: ["Lo ignoraron", "Se fueron a casa"] }
+      ] },
+    { dif: 3, t: "María perdió el anillo que su abuela le había regalado. Buscó por toda la casa sin encontrarlo. Al día siguiente, encontró el anillo debajo del sofá y respiró aliviada.",
+      qs: [
+        { q: "¿Qué perdió María?", ok: "Un anillo de su abuela", ops: ["Su celular", "Sus llaves"] },
+        { q: "¿Dónde lo encontró?", ok: "Debajo del sofá", ops: ["En el jardín", "En su cama"] },
+        { q: "¿Cómo se sintió al encontrarlo?", ok: "Aliviada", ops: ["Enojada", "Aburrida"] }
+      ] },
+    { dif: 4, t: "En el campamento, los niños hicieron una fogata. Cada uno contó una historia de miedo. Cuando era el turno de Pablo, el viento apagó la fogata y todo quedó a oscuras. Pablo decidió contar su historia igual, con una linterna, y todos escucharon atentos hasta el final.",
+      qs: [
+        { q: "¿Qué hicieron los niños en la fogata?", ok: "Contaron historias de miedo", ops: ["Cantaron canciones", "Cocinaron"] },
+        { q: "¿Qué pasó cuando era el turno de Pablo?", ok: "El viento apagó la fogata", ops: ["Empezó a llover", "Se durmió"] },
+        { q: "¿Qué hizo Pablo con la linterna?", ok: "Contó su historia igual", ops: ["Se fue a dormir", "La escondió"] }
+      ] },
+    { dif: 4, t: "A la hora del almuerzo, la fila del comedor era muy larga. Tania pensó que se quedaría sin comida. Sin embargo, la cocinera le guardó su plato favorito porque sabía que a Tania le gustaba. Tania le agradeció y comió tranquila.",
+      qs: [
+        { q: "¿Cómo estaba la fila del comedor?", ok: "Muy larga", ops: ["Vacía", "Cerrada"] },
+        { q: "¿Qué pensó Tania?", ok: "Que se quedaría sin comida", ops: ["Que no tenía hambre", "Que llegaría tarde"] },
+        { q: "¿Por qué no se quedó sin comida?", ok: "La cocinera le guardó su plato", ops: ["Porque trajo comida", "Porque comió en otro lugar"] }
       ] }
   ];
   return crearMotor("ver4", 4, (gen, motor) => {
     const { estado } = motor;
-    const maxDif = estado.nivel <= 3 ? 1 : estado.nivel <= 6 ? 2 : 3;
+    const maxDif = estado.nivel <= 3 ? 1 : estado.nivel <= 5 ? 2 : estado.nivel <= 7 ? 3 : 4;
     const pool = HISTORIAS.filter(h => h.dif <= maxDif);
     const h = pool[Math.floor(Math.random() * pool.length)];
 
