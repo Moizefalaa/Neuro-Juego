@@ -1280,10 +1280,11 @@ GAMES.raz2 = () => {
     const C = { t: tB, c: c1, g: false };
     const correcta = { t: tB, c: c2, g: true };
     const clave = o => o.t + "|" + o.c + "|" + o.g;
+    const c3 = COLORES.filter(c => c !== c1 && c !== c2)[Math.floor(Math.random() * 3)];
     const distractores = [
       { t: tB, c: c1, g: true },
-      { t: tA, c: c2, g: true },
-      { t: tB, c: c2, g: false }
+      { t: tB, c: c2, g: false },
+      { t: tB, c: c3, g: true }
     ].filter(d => clave(d) !== clave(correcta));
     const opciones = mezclar([correcta, ...distractores]);
 
