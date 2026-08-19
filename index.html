@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>NeuroJuego - Estimulación cognitiva</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -160,6 +161,15 @@
   .circulo-color:hover { transform: scale(1.1); }
   .pista-tiempo { width: 320px; height: 12px; background: #2c3a57; border-radius: 999px; overflow: hidden; }
   .pista-relleno { height: 100%; background: #fb8c00; border-radius: 999px; }
+
+  .grid-carrera { display: grid; grid-template-columns: repeat(4, 72px); gap: 10px; }
+  .celda-carrera {
+    width: 72px; height: 72px; border-radius: 14px; background: #2c3a57;
+    border: 3px solid #4a5a80; cursor: pointer; font-size: 2rem;
+    transition: background 0.12s, transform 0.12s;
+  }
+  .celda-carrera:active { transform: scale(0.92); }
+  .celda-carrera.fallada { background: #6e2f2d; animation: sacudir 0.3s; }
 
   .palabra-ver { font-size: 2.3rem; font-weight: 800; color: #64b5f6; text-align: center; padding: 6px 20px; }
   .btn-ver {
@@ -377,6 +387,7 @@
       <button class="btn secundario" onclick="renderPerfil();mostrarPantalla('scr-perfil')">📊 Ver mi progreso</button>
       <button class="btn secundario" onclick="irATerapeuta()">🧑‍⚕️ Panel del terapeuta</button>
       <button class="btn" onclick="iniciarTest()">🎯 Test de nivel inicial</button>
+      <button class="btn" onclick="abrirMulti()">🏆 Competir</button>
     </div>
   </section>
 
@@ -427,6 +438,43 @@
     </div>
     <div id="zona-panel" style="display:none;flex-direction:column;gap:16px;width:100%"></div>
     <button class="btn secundario" onclick="volverMenu()">⬅ Volver</button>
+  </section>
+
+<section id="scr-multi" class="screen">
+    <div class="instruccion">¡Juega contra un amigo! 🏆</div>
+    <div id="multi-contenedor" style="display:flex;flex-direction:column;align-items:center;gap:16px;width:100%">
+      <div id="multi-crear" style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%">
+        <div class="input-linea" style="max-width:380px">
+          <input id="multi-nombre" placeholder="Tu nombre" maxlength="15">
+        </div>
+        <div class="navegacion">
+          <button class="btn" onclick="crearSala()">📡 Crear sala</button>
+          <button class="btn secundario" onclick="unirseSala()">🔑 Unirme a una sala</button>
+        </div>
+        <div class="input-linea" id="fila-codigo" style="display:none;max-width:380px">
+          <input id="multi-codigo" placeholder="Código de la sala" maxlength="6" style="text-transform:uppercase">
+          <button class="btn" onclick="conectarASala()">Entrar</button>
+        </div>
+      </div>
+      <div id="multi-sala" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%">
+        <div class="tarjeta-panel" style="max-width:360px;text-align:center">
+          <h3 id="multi-estado">Creando sala...</h3>
+          <div id="multi-codigo-grande" style="font-size:3rem;letter-spacing:8px;font-weight:800;color:#ffb300"></div>
+          <div id="multi-qr" style="background:#fff;border-radius:14px;padding:10px;display:inline-block;margin:10px 0"></div>
+          <div style="font-size:0.9rem;color:#9fb4d8">Escanea el QR o comparte el código con tu amigo</div>
+          <div id="multi-rival" style="margin-top:12px;font-size:1.1rem;color:#eef2f7"></div>
+        </div>
+        <div class="navegacion">
+          <button class="btn" id="btn-empezar" style="display:none" onclick="empezarCarrera()">🏁 ¡Empezar!</button>
+          <button class="btn secundario" onclick="salirMulti()">⬅ Salir</button>
+        </div>
+      </div>
+      <div id="multi-juego" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%">
+        <div id="marcador" style="display:flex;gap:18px;align-items:center;background:#2c3a57;border-radius:16px;padding:10px 22px;font-size:1.2rem;font-weight:700"></div>
+        <div id="multi-arena" style="display:flex;flex-direction:column;align-items:center;gap:16px;width:100%"></div>
+        <button class="btn secundario" onclick="salirMulti()">⬅ Salir</button>
+      </div>
+    </div>
   </section>
 
 </main>
@@ -628,6 +676,10 @@ function volverMenu() {
   GEN++; speechSynthesis.cancel();
   MODO_TEST = null;
   if (juegoActual && juegoActual.limpiar) juegoActual.limpiar();
+  if (CARRERA_TIMER) { clearInterval(CARRERA_TIMER); CARRERA_TIMER = null; }
+  if (CONN) { try { CONN.close(); } catch (e) {} CONN = null; }
+  if (PEER) { try { PEER.destroy(); } catch (e) {} PEER = null; }
+  ROL = null; CARRERA_GEN++;
   construirMenu(); mostrarPantalla("scr-inicio");
 }
 
@@ -1475,6 +1527,14 @@ GAMES.vel1 = () => {
     caja.textContent = objetivo;
     motor.zona().appendChild(caja);
 
+    const dur = Math.max(5000, 24000 - estado.nivel * 1500) * multTiempo();
+    const pista = document.createElement("div");
+    pista.className = "pista-tiempo";
+    const relleno = document.createElement("div");
+    relleno.className = "pista-relleno";
+    pista.appendChild(relleno);
+    motor.zona().appendChild(pista);
+
     const grid = document.createElement("div");
     grid.className = "grid-vel";
     mezclar(items).forEach(it => {
@@ -1496,6 +1556,20 @@ GAMES.vel1 = () => {
       grid.appendChild(c);
     });
     motor.zona().appendChild(grid);
+
+    const t0 = Date.now();
+    const timer = setInterval(() => {
+      if (gen !== GEN) { clearInterval(timer); return; }
+      const rest = dur - (Date.now() - t0);
+      relleno.style.width = Math.max(0, rest / dur * 100) + "%";
+      if (rest <= 0) {
+        clearInterval(timer);
+        if (cerrado) return;
+        cerrado = true;
+        motor.status("⏰ ¡Se acabó el tiempo!");
+        motor.registrar(false);
+      }
+    }, 100);
   });
 };
 
@@ -2833,6 +2907,293 @@ function renderTerapeuta() {
   };
   acciones.append(bInf, bExp, bReset);
   zona.appendChild(acciones);
+}
+
+let PEER = null, CONN = null, ROL = null, MI_NOMBRE = "";
+let PTS_MIO = 0, PTS_RIVAL = 0, RIVAL_NOMBRE = "Amigo";
+let CARRERA_TIMER = null, CARRERA_GEN = 0, CARRERA_FIN = false, RONDA_MULTI = null;
+
+function abrirMulti() {
+  document.getElementById("multi-crear").style.display = "flex";
+  document.getElementById("multi-sala").style.display = "none";
+  document.getElementById("multi-juego").style.display = "none";
+  document.getElementById("fila-codigo").style.display = "none";
+  document.getElementById("multi-nombre").value = pac().nombre || "";
+  mostrarPantalla("scr-multi");
+}
+
+function salirMulti() {
+  if (CARRERA_TIMER) clearInterval(CARRERA_TIMER);
+  if (CONN) { try { CONN.close(); } catch (e) {} }
+  if (PEER) { try { PEER.destroy(); } catch (e) {} }
+  PEER = null; CONN = null; ROL = null; CARRERA_GEN++;
+  GEN++;
+  volverMenu();
+}
+
+function crearSala() {
+  if (!window.Peer) { mostrarFeedback("No se pudo cargar la conexión (revisa tu internet)", "mal"); return; }
+  MI_NOMBRE = document.getElementById("multi-nombre").value.trim() || "Jugador 1";
+  ROL = "host";
+  document.getElementById("multi-crear").style.display = "none";
+  document.getElementById("multi-sala").style.display = "flex";
+  document.getElementById("multi-estado").textContent = "Creando sala...";
+  document.getElementById("btn-empezar").style.display = "none";
+  const code = generarCodigo();
+  PEER = new Peer("neurojuego-" + code, { debug: 0 });
+  PEER.on("open", () => {
+    document.getElementById("multi-estado").textContent = "¡Sala lista!";
+    document.getElementById("multi-codigo-grande").textContent = code;
+    const url = "https://moizefalaa.github.io/Neuro-Juego/?sala=" + code;
+    const img = document.createElement("img");
+    img.alt = "QR de la sala";
+    img.style.cssText = "width:220px;height:220px";
+    img.src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(url);
+    document.getElementById("multi-qr").innerHTML = "";
+    document.getElementById("multi-qr").appendChild(img);
+    document.getElementById("multi-rival").textContent = "Esperando que se conecte un amigo...";
+  });
+  PEER.on("connection", (conn) => {
+    CONN = conn;
+    CONN.on("open", () => {
+      document.getElementById("multi-rival").textContent = "✅ ¡" + RIVAL_NOMBRE + " se conectó!";
+      document.getElementById("btn-empezar").style.display = "inline-block";
+    });
+    CONN.on("data", manejarDato);
+    CONN.on("close", () => { if (ROL === "host") { document.getElementById("multi-rival").textContent = "Tu amigo se desconectó"; document.getElementById("btn-empezar").style.display = "none"; } });
+  });
+  PEER.on("error", (e) => {
+    if (e.type === "unavailable-id") {
+      PEER.destroy(); PEER = null;
+      setTimeout(() => crearSala(), 300);
+    } else {
+      mostrarFeedback("Error de conexión: " + e.type, "mal");
+    }
+  });
+}
+
+function generarCodigo() {
+  const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let c = "";
+  for (let i = 0; i < 4; i++) c += abc[Math.floor(Math.random() * abc.length)];
+  return c;
+}
+
+function unirseSala() {
+  document.getElementById("fila-codigo").style.display = "flex";
+  document.getElementById("multi-codigo").focus();
+}
+
+function conectarASala() {
+  if (!window.Peer) { mostrarFeedback("No se pudo cargar la conexión (revisa tu internet)", "mal"); return; }
+  const code = document.getElementById("multi-codigo").value.trim().toUpperCase();
+  if (!code) { mostrarFeedback("Escribe el código de la sala", "mal"); return; }
+  MI_NOMBRE = document.getElementById("multi-nombre").value.trim() || "Jugador 2";
+  ROL = "guest";
+  document.getElementById("multi-crear").style.display = "none";
+  document.getElementById("multi-sala").style.display = "flex";
+  document.getElementById("multi-estado").textContent = "Conectando a la sala...";
+  document.getElementById("multi-codigo-grande").textContent = code;
+  document.getElementById("multi-qr").innerHTML = "";
+  document.getElementById("btn-empezar").style.display = "none";
+  document.getElementById("multi-rival").textContent = "Esperando al anfitrión...";
+  PEER = new Peer({ debug: 0 });
+  PEER.on("open", () => {
+    CONN = PEER.connect("neurojuego-" + code, { reliable: true });
+    CONN.on("open", () => {
+      CONN.send({ t: "hola", nombre: MI_NOMBRE });
+      document.getElementById("multi-estado").textContent = "¡Conectado!";
+      document.getElementById("multi-rival").textContent = "Esperando que el anfitrión empiece...";
+    });
+    CONN.on("data", manejarDato);
+    CONN.on("close", () => { mostrarFeedback("Se perdió la conexión con la sala", "mal"); });
+  });
+  PEER.on("error", () => mostrarFeedback("No se encontró la sala. Revisa el código.", "mal"));
+}
+
+function manejarDato(d) {
+  if (!d || !d.t) return;
+  if (d.t === "hola") {
+    RIVAL_NOMBRE = d.nombre || "Amigo";
+    if (ROL === "host") {
+      document.getElementById("multi-rival").textContent = "✅ ¡" + RIVAL_NOMBRE + " se conectó!";
+      document.getElementById("btn-empezar").style.display = "inline-block";
+    }
+  } else if (d.t === "puntos") {
+    PTS_RIVAL = d.n;
+    pintarMarcador();
+  } else if (d.t === "start") {
+    empezarCarreraLocal(d.seg);
+  } else if (d.t === "fin") {
+    PTS_RIVAL = d.n;
+    pintarMarcador();
+    terminarCarrera();
+  } else if (d.t === "revancha") {
+    if (ROL === "host") empezarCarrera();
+  }
+}
+
+function empezarCarrera() {
+  if (!CONN) return;
+  const seg = 30;
+  CONN.send({ t: "start", seg });
+  empezarCarreraLocal(seg);
+}
+
+function pintarMarcador() {
+  const m = document.getElementById("marcador");
+  m.innerHTML = `<span style="color:#fb8c00">${MI_NOMBRE || "Tú"} ${PTS_MIO}</span>
+    <span style="color:#9fb4d8">VS</span>
+    <span style="color:#64b5f6">${RIVAL_NOMBRE} ${PTS_RIVAL}</span>`;
+}
+
+function empezarCarreraLocal(seg) {
+  CARRERA_GEN++;
+  CARRERA_FIN = false;
+  PTS_MIO = 0; PTS_RIVAL = 0;
+  document.getElementById("multi-crear").style.display = "none";
+  document.getElementById("multi-sala").style.display = "none";
+  document.getElementById("multi-juego").style.display = "flex";
+  pintarMarcador();
+  const arena = document.getElementById("multi-arena");
+  arena.innerHTML = "";
+  const cuenta = document.createElement("div");
+  cuenta.style.cssText = "font-size:4rem;font-weight:800;color:#ffb300";
+  arena.appendChild(cuenta);
+  let n = 3;
+  cuenta.textContent = n;
+  const miGen = CARRERA_GEN;
+  const cd2 = setInterval(() => {
+    if (miGen !== CARRERA_GEN) { clearInterval(cd2); return; }
+    n--;
+    if (n <= 0) {
+      clearInterval(cd2);
+      cuenta.remove();
+      montarArenaCarrera(seg, miGen);
+    } else {
+      cuenta.textContent = n;
+    }
+  }, 800);
+}
+
+function montarArenaCarrera(seg, miGen) {
+  const arena = document.getElementById("multi-arena");
+  arena.innerHTML = "";
+  const pista = document.createElement("div");
+  pista.className = "pista-tiempo";
+  const relleno = document.createElement("div");
+  relleno.className = "pista-relleno";
+  pista.appendChild(relleno);
+  arena.appendChild(pista);
+  const objetivo = document.createElement("div");
+  objetivo.className = "objetivo-vel";
+  arena.appendChild(objetivo);
+  const grid = document.createElement("div");
+  grid.className = "grid-carrera";
+  arena.appendChild(grid);
+
+  const bancos = [
+    ["🐶", "🐱", "🐰", "🦊", "🐻"],
+    ["🍎", "🍌", "🍇", "🍓", "🍑"],
+    ["🚗", "🚌", "🚲", "✈️", "🚢"],
+    ["⭐", "❤️", "🔵", "🔺", "🔶"],
+    ["🐸", "🐢", "🦋", "🐝", "🐞"]
+  ];
+  const robarBanco = baraja(bancos);
+
+  function nuevaRonda() {
+    if (CARRERA_FIN || miGen !== CARRERA_GEN) return;
+    const banco = robarBanco();
+    const target = banco[Math.floor(Math.random() * banco.length)];
+    objetivo.textContent = "Busca: " + target;
+    const total = 16, meta = 4;
+    const items = [];
+    for (let i = 0; i < meta; i++) items.push(target);
+    while (items.length < total) {
+      const d = banco[Math.floor(Math.random() * banco.length)];
+      if (d !== target) items.push(d);
+    }
+    grid.innerHTML = "";
+    mezclar(items).forEach(it => {
+      const c = document.createElement("button");
+      c.className = "celda-carrera";
+      c.textContent = it;
+      c.onclick = () => {
+        if (CARRERA_FIN || miGen !== CARRERA_GEN) return;
+        if (it === target) {
+          tono(600 + Math.random() * 200, 0.08);
+          PTS_MIO++;
+          pintarMarcador();
+          if (CONN) CONN.send({ t: "puntos", n: PTS_MIO });
+          nuevaRonda();
+        } else {
+          c.classList.add("fallada");
+          tono(196, 0.15, "triangle", 0.1);
+        }
+      };
+      grid.appendChild(c);
+    });
+  }
+  nuevaRonda();
+
+  const t0 = Date.now();
+  CARRERA_TIMER = setInterval(() => {
+    if (miGen !== CARRERA_GEN) { clearInterval(CARRERA_TIMER); return; }
+    const rest = seg * 1000 - (Date.now() - t0);
+    relleno.style.width = Math.max(0, rest / (seg * 1000) * 100) + "%";
+    if (rest <= 0) {
+      clearInterval(CARRERA_TIMER);
+      CARRERA_FIN = true;
+      if (CONN) CONN.send({ t: "fin", n: PTS_MIO });
+      terminarCarrera();
+    }
+  }, 100);
+}
+
+function terminarCarrera() {
+  setTimeout(() => {
+    const arena = document.getElementById("multi-arena");
+    if (!arena) return;
+    arena.innerHTML = "";
+    const caja = document.createElement("div");
+    caja.className = "caja-resultado";
+    let emoji, titulo;
+    if (PTS_MIO > PTS_RIVAL) { emoji = "🏆"; titulo = "¡Ganaste, " + MI_NOMBRE + "!"; }
+    else if (PTS_RIVAL > PTS_MIO) { emoji = "💪"; titulo = "¡Ganó " + RIVAL_NOMBRE + "!"; }
+    else { emoji = "🤝"; titulo = "¡Empate!"; }
+    caja.innerHTML = `
+      <div class="emoji-grande">${emoji}</div>
+      <h2>${titulo}</h2>
+      <p style="color:#9fb4d8;font-size:1.05rem">${MI_NOMBRE}: ${PTS_MIO} · ${RIVAL_NOMBRE}: ${PTS_RIVAL}</p>
+      <div class="navegacion">
+        <button class="btn" onclick="revancha()">🔁 Revancha</button>
+        <button class="btn secundario" onclick="salirMulti()">🏠 Salir</button>
+      </div>`;
+    arena.appendChild(caja);
+    juegoActual = { empezar: () => revancha(), limpiar: null };
+  }, 400);
+}
+
+function revancha() {
+  if (ROL === "host") {
+    if (CONN) CONN.send({ t: "start", seg: 30 });
+    empezarCarreraLocal(30);
+  } else {
+    if (CONN) CONN.send({ t: "revancha" });
+    mostrarFeedback("Pedido de revancha enviado ⏳", "ok");
+  }
+}
+
+const params = new URLSearchParams(location.search);
+const salaParam = params.get("sala");
+if (salaParam) {
+  window.addEventListener("load", () => {
+    document.getElementById("multi-codigo").value = salaParam.toUpperCase();
+    abrirMulti();
+    document.getElementById("fila-codigo").style.display = "flex";
+    document.getElementById("multi-nombre").value = pac().nombre || "Jugador 2";
+    setTimeout(() => conectarASala(), 600);
+  });
 }
 
 construirMenu();
