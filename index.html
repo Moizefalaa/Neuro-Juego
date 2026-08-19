@@ -55,6 +55,8 @@
   .c-ver { background: linear-gradient(135deg, #1e88e5, #64b5f6); }
   .c-vis { background: linear-gradient(135deg, #d81b60, #f06292); }
   .c-soc { background: linear-gradient(135deg, #00838f, #4dd0e1); }
+  .c-mini { background: linear-gradient(135deg, #6a1b9a, #ba68c8); }
+  .c-mini.bloqueado { background: #3a4560; }
 
   .game-card.pendiente { background: linear-gradient(135deg, #8d6e00, #d4e157); color: #222000; animation: latido 1.6s infinite; }
   @keyframes latido { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
@@ -170,6 +172,35 @@
   }
   .celda-carrera:active { transform: scale(0.92); }
   .celda-carrera.fallada { background: #6e2f2d; animation: sacudir 0.3s; }
+
+  .mini-cabezal { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .mini-vida { font-size: 1.2rem; font-weight: 700; }
+  .mini-vida .barra { display: inline-block; width: 120px; height: 14px; background: #2c3a57; border-radius: 999px; overflow: hidden; vertical-align: middle; margin-left: 6px; }
+  .mini-vida .relleno { height: 100%; background: #66bb6a; transition: width 0.2s; }
+  .mini-vida.enemigo .relleno { background: #ef5350; }
+  .arena-pelea { position: relative; width: 340px; height: 220px; background: linear-gradient(#2c3a57, #1a2332); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; }
+  .palito { position: absolute; bottom: 26px; transition: transform 0.12s; }
+  .palito.mov { transform: translateY(-6px); }
+  .palito.ataca { transform: rotate(-25deg) translateY(-4px); }
+  .botones-pelea { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .boton-pelea { border: none; border-radius: 14px; padding: 14px 20px; font-size: 1.15rem; font-weight: 700; cursor: pointer; color: #fff; background: #374771; transition: transform 0.1s; }
+  .boton-pelea:active { transform: scale(0.94); }
+  .boton-pelea.puno { background: #c62828; }
+  .boton-pelea.patada { background: #1565c0; }
+  .boton-pelea.bloqueo { background: #2e7d32; }
+  .efecto { position: absolute; font-size: 1.6rem; pointer-events: none; animation: flotar 0.8s forwards; }
+  @keyframes flotar { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-30px); } }
+
+  .arena-shooter { position: relative; width: 340px; height: 240px; background: linear-gradient(#1a2332, #2c3a57); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; touch-action: none; }
+  .enemigo { position: absolute; font-size: 1.7rem; cursor: pointer; animation: latido 1.2s infinite; }
+  .torre { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 2.2rem; }
+
+  .arena-salta { position: relative; width: 340px; height: 200px; background: linear-gradient(#1a2332, #2c3a57); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; }
+  .corredor { position: absolute; bottom: 8px; left: 24px; font-size: 2rem; transition: bottom 0.18s, transform 0.18s; }
+  .corredor.saltando { bottom: 72px; transform: translateY(-10px); }
+  .obstaculo { position: absolute; bottom: 8px; font-size: 1.7rem; }
+  .btn-saltar { border: none; border-radius: 999px; width: 92px; height: 92px; font-size: 1.4rem; font-weight: 800; background: #ffb300; color: #25210c; cursor: pointer; }
+  .btn-saltar:active { transform: scale(0.94); }
 
   .palabra-ver { font-size: 2.3rem; font-weight: 800; color: #64b5f6; text-align: center; padding: 6px 20px; }
   .btn-ver {
@@ -408,7 +439,15 @@
       <div class="navegacion">
         <button class="btn" onclick="juegoActual.empezar()">🔁 Jugar otra vez</button>
         <button class="btn secundario" onclick="volverMenu()">🏠 Menú</button>
-      </div>    </div>
+      </div>
+      <div id="res-mini-boton" style="display:none;margin-top:14px"></div>    </div>
+  </section>
+
+  <section id="scr-mini" class="screen">
+    <div class="instruccion" id="mini-instruccion"></div>
+    <div id="status-mini"></div>
+    <div id="zona-mini" style="display:flex;flex-direction:column;align-items:center;gap:16px;width:100%"></div>
+    <button class="btn secundario" onclick="salirMini()">⬅ Volver</button>
   </section>
 
   <section id="scr-perfil" class="screen">
@@ -761,6 +800,28 @@ function construirMenu() {
     seccion.appendChild(grid);
     menu.appendChild(seccion);
   }
+  const seccionMini = document.createElement("div");
+  seccionMini.className = "seccion-menu";
+  const tituloMini = document.createElement("div");
+  tituloMini.className = "seccion-titulo";
+  tituloMini.innerHTML = `🎮 Minijuegos <span style="font-size:0.78rem;background:#33415c;border-radius:999px;padding:2px 10px">premios de recompensa</span>`;
+  seccionMini.appendChild(tituloMini);
+  const gridMini = document.createElement("div");
+  gridMini.className = "menu-grid";
+  Object.keys(MINIS).forEach(id => {
+    const m = MINIS[id];
+    const desbloqueado = est >= m.estrellas;
+    const b = document.createElement("button");
+    b.className = "game-card " + (desbloqueado ? "c-mini" : "c-mini bloqueado");
+    b.innerHTML = desbloqueado
+      ? `<span class="icon">${m.icono}</span><span>${m.nombre}</span><span class="nivel">🎮 ¡Jugar!</span>`
+      : `<span class="icon">🔒</span><span>${m.nombre}</span><span class="nivel">Desbloquea con ${m.estrellas} ⭐</span>`;
+    if (desbloqueado) b.onclick = () => abrirMini(id);
+    else { b.disabled = true; b.style.opacity = 0.6; }
+    gridMini.appendChild(b);
+  });
+  seccionMini.appendChild(gridMini);
+  menu.appendChild(seccionMini);
   refrescarEstrellas();
 }
 
@@ -1040,6 +1101,15 @@ function crearMotor(idJuego, rondas, montarRonda, limpiarFn) {
       document.getElementById("res-titulo").textContent = subio ? "¡Subiste de nivel! 🎉" : "¡Sesión completada!";
       document.getElementById("res-detalle").textContent = `${g.nombre} · Acertaste ${aciertos} de ${total} · Nivel actual: ${estado.nivel} · +${ganadas} ⭐${notaNivel}`;
       document.getElementById("res-emoji").textContent = subio ? "🚀" : aciertos >= rondas / 2 ? "🏆" : "🌱";
+      const contMini = document.getElementById("res-mini-boton");
+      const desbloqueados = Object.keys(MINIS).filter(id => estrellasPaciente() >= MINIS[id].estrellas);
+      if (desbloqueados.length && aciertos >= Math.max(1, Math.floor(total / 2))) {
+        contMini.style.display = "block";
+        contMini.innerHTML = `<button class="btn" onclick="abrirMini('${desbloqueados[Math.floor(Math.random() * desbloqueados.length)]}', volverMenu)">🎮 ¡Mini-juego sorpresa!</button>`;
+      } else {
+        contMini.style.display = "none";
+        contMini.innerHTML = "";
+      }
       mostrarPantalla("scr-resultado");
     }
   };
@@ -3023,7 +3093,7 @@ function manejarDato(d) {
     PTS_RIVAL = d.n;
     pintarMarcador();
   } else if (d.t === "start") {
-    empezarCarreraLocal(d.seg);
+    empezarVsPlan(d.plan);
   } else if (d.t === "fin") {
     PTS_RIVAL = d.n;
     pintarMarcador();
@@ -3035,9 +3105,22 @@ function manejarDato(d) {
 
 function empezarCarrera() {
   if (!CONN) return;
-  const seg = 30;
-  CONN.send({ t: "start", seg });
-  empezarCarreraLocal(seg);
+  const plan = vsPlan();
+  CONN.send({ t: "start", plan });
+  empezarVsPlan(plan);
+}
+
+function vsPlan() {
+  const desbloqueados = Object.keys(MINIS).filter(id => estrellasPaciente() >= MINIS[id].estrellas);
+  const minis = desbloqueados.length ? desbloqueados : Object.keys(MINIS);
+  const elegidos = mezclar(minis).slice(0, 2);
+  return [
+    { tipo: "carrera", seg: 15 },
+    { tipo: "mini", mini: elegidos[0] },
+    { tipo: "carrera", seg: 15 },
+    { tipo: "mini", mini: elegidos[1] },
+    { tipo: "carrera", seg: 15 }
+  ];
 }
 
 function pintarMarcador() {
@@ -3047,7 +3130,7 @@ function pintarMarcador() {
     <span style="color:#64b5f6">${RIVAL_NOMBRE} ${PTS_RIVAL}</span>`;
 }
 
-function empezarCarreraLocal(seg) {
+function empezarVsPlan(plan) {
   CARRERA_GEN++;
   CARRERA_FIN = false;
   PTS_MIO = 0; PTS_RIVAL = 0;
@@ -3060,23 +3143,62 @@ function empezarCarreraLocal(seg) {
   const cuenta = document.createElement("div");
   cuenta.style.cssText = "font-size:4rem;font-weight:800;color:#ffb300";
   arena.appendChild(cuenta);
+  const miGen = CARRERA_GEN;
   let n = 3;
   cuenta.textContent = n;
-  const miGen = CARRERA_GEN;
   const cd2 = setInterval(() => {
     if (miGen !== CARRERA_GEN) { clearInterval(cd2); return; }
     n--;
     if (n <= 0) {
       clearInterval(cd2);
       cuenta.remove();
-      montarArenaCarrera(seg, miGen);
+      ejecutarFase(0, plan, miGen);
     } else {
       cuenta.textContent = n;
     }
   }, 800);
 }
 
-function montarArenaCarrera(seg, miGen) {
+function ejecutarFase(idx, plan, miGen) {
+  if (miGen !== CARRERA_GEN || CARRERA_FIN) return;
+  if (idx >= plan.length) { terminarCarrera(); return; }
+  const fase = plan[idx];
+  const arena = document.getElementById("multi-arena");
+  arena.innerHTML = "";
+  const cartel = document.createElement("div");
+  cartel.style.cssText = "font-size:1.4rem;font-weight:800;color:#ffb300;text-align:center";
+  cartel.textContent = fase.tipo === "carrera" ? "⚡ ¡Ronda de búsqueda!" : `🎮 ¡Minijuego sorpresa!`;
+  arena.appendChild(cartel);
+  const sub = document.createElement("div");
+  sub.style.cssText = "font-size:0.95rem;color:#9fb4d8;text-align:center";
+  sub.textContent = fase.tipo === "mini" ? MINIS[fase.mini].icono + " " + MINIS[fase.mini].nombre : "Encuentra el emoji que se pide";
+  arena.appendChild(sub);
+  setTimeout(() => {
+    if (miGen !== CARRERA_GEN) return;
+    arena.innerHTML = "";
+    if (fase.tipo === "carrera") {
+      montarArenaCarrera(fase.seg, miGen, () => ejecutarFase(idx + 1, plan, miGen));
+    } else {
+      montarMiniVs(fase.mini, arena, miGen, () => ejecutarFase(idx + 1, plan, miGen));
+    }
+  }, 1400);
+}
+
+function montarMiniVs(mini, zona, miGen, cbFin) {
+  MINI_GEN++;
+  MINI_PUNTOS = 0;
+  MINIS[mini].montar(zona, {
+    cb: (puntos) => {
+      if (miGen !== CARRERA_GEN) return;
+      PTS_MIO += puntos;
+      pintarMarcador();
+      if (CONN) CONN.send({ t: "puntos", n: PTS_MIO });
+      cbFin();
+    }
+  });
+}
+
+function montarArenaCarrera(seg, miGen, cbFin) {
   const arena = document.getElementById("multi-arena");
   arena.innerHTML = "";
   const pista = document.createElement("div");
@@ -3145,7 +3267,7 @@ function montarArenaCarrera(seg, miGen) {
       clearInterval(CARRERA_TIMER);
       CARRERA_FIN = true;
       if (CONN) CONN.send({ t: "fin", n: PTS_MIO });
-      terminarCarrera();
+      cbFin();
     }
   }, 100);
 }
@@ -3176,8 +3298,7 @@ function terminarCarrera() {
 
 function revancha() {
   if (ROL === "host") {
-    if (CONN) CONN.send({ t: "start", seg: 30 });
-    empezarCarreraLocal(30);
+    empezarCarrera();
   } else {
     if (CONN) CONN.send({ t: "revancha" });
     mostrarFeedback("Pedido de revancha enviado ⏳", "ok");
@@ -3195,6 +3316,286 @@ if (salaParam) {
     setTimeout(() => conectarASala(), 600);
   });
 }
+
+const MINIS = {
+  pelea: { nombre: "Pelea de palitos", icono: "🥊", estrellas: 10, instruccion: "¡Defiende tu palito azul! Pega con 👊 puño o 🦶 patada y bloquea con 🛡️ antes de que tu rival te tumbe." },
+  shooter: { nombre: "Defiende el fuerte", icono: "🎯", estrellas: 25, instruccion: "Toca los enemigos rojos para eliminarlos antes de que lleguen a tu fuerte. ¡No dejes que pasen!" },
+  salta: { nombre: "Salta obstáculos", icono: "🏃", estrellas: 40, instruccion: "¡Salta por encima de los obstáculos! Toca el botón SALTA en el momento justo para no chocarlos." }
+};
+let MINI_ACTIVO = null, MINI_GEN = 0, MINI_TIMER = null, MINI_CB = null;
+let MINI_PUNTOS = 0, MINI_META = false;
+
+function abrirMini(id, cb) {
+  const m = MINIS[id];
+  MINI_CB = cb || null;
+  MINI_ACTIVO = id;
+  MINI_PUNTOS = 0; MINI_META = false;
+  MINI_GEN++;
+  document.getElementById("mini-instruccion").textContent = m.instruccion;
+  document.getElementById("status-mini").textContent = "";
+  mostrarPantalla("scr-mini");
+  const zona = document.getElementById("zona-mini");
+  zona.innerHTML = "";
+  MINIS[id].montar(zona);
+}
+
+function salirMini() {
+  MINI_GEN++;
+  if (MINI_TIMER) clearInterval(MINI_TIMER);
+  if (MINI_CB) { const cb = MINI_CB; MINI_CB = null; cb(); return; }
+  construirMenu(); mostrarPantalla("scr-inicio");
+}
+
+function miniTermino(mensaje, recompensa) {
+  const p = pac();
+  p.minis = p.minis || {};
+  const prev = p.minis[MINI_ACTIVO] || 0;
+  if (MINI_PUNTOS > prev) { p.minis[MINI_ACTIVO] = MINI_PUNTOS; guardar(); refrescarEstrellas(); }
+  p.bonus = (p.bonus || 0) + (recompensa || 0);
+  guardar(); refrescarEstrellas();
+  if (recompensa) sonidoSubida();
+  document.getElementById("status-mini").textContent = "";
+  const zona = document.getElementById("zona-mini");
+  zona.innerHTML = "";
+  const caja = document.createElement("div");
+  caja.className = "caja-resultado";
+  caja.innerHTML = `
+    <div class="emoji-grande">${MINIS[MINI_ACTIVO].icono}</div>
+    <h2>${mensaje}</h2>
+    <p style="color:#9fb4d8;font-size:1.05rem">${MINIS[MINI_ACTIVO].nombre} · ${MINI_PUNTOS} puntos</p>
+    ${recompensa ? `<p style="color:#ffb300;font-size:1rem;margin-top:6px">+${recompensa} ⭐ de bonus</p>` : ""}
+    <div class="navegacion">
+      <button class="btn" onclick="abrirMini(MINI_ACTIVO, MINI_CB)">🔁 Jugar otra vez</button>
+      <button class="btn secundario" onclick="salirMini()">${MINI_CB ? "Continuar ➡" : "🏠 Menú"}</button>
+    </div>`;
+  zona.appendChild(caja);
+}
+
+MINIS.pelea.montar = (zona, cfg) => {
+  const gen = MINI_GEN;
+  const cb = cfg && cfg.cb;
+  let vidaJug = 3, vidaCPU = 3, bloqJug = false, cpuAtacando = false, fin = false;
+  document.getElementById("status-mini").textContent = "Nivel " + Math.min(3, 1 + Math.floor(nivelDe("raz1") / 4));
+  const cab = document.createElement("div");
+  cab.className = "mini-cabezal";
+  const vidJ = document.createElement("div");
+  vidJ.className = "mini-vida";
+  vidJ.innerHTML = `Tú <span class="barra"><span class="relleno" style="width:100%"></span></span>`;
+  const vidC = document.createElement("div");
+  vidC.className = "mini-vida enemigo";
+  vidC.innerHTML = `Rival <span class="barra"><span class="relleno" style="width:100%"></span></span>`;
+  cab.append(vidJ, vidC);
+  zona.appendChild(cab);
+  const arena = document.createElement("div");
+  arena.className = "arena-pelea";
+  arena.innerHTML = `
+    <div class="palito" style="left:24px"><svg width="64" height="110" viewBox="0 0 64 110">
+      <line x1="32" y1="30" x2="32" y2="80" stroke="#4fc3f7" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="32" cy="18" r="11" fill="#4fc3f7"/>
+      <line x1="32" y1="48" x2="14" y2="60" stroke="#4fc3f7" stroke-width="6" stroke-linecap="round"/>
+      <line x1="32" y1="48" x2="50" y2="60" stroke="#4fc3f7" stroke-width="6" stroke-linecap="round"/>
+      <line x1="32" y1="80" x2="20" y2="102" stroke="#4fc3f7" stroke-width="6" stroke-linecap="round"/>
+      <line x1="32" y1="80" x2="44" y2="102" stroke="#4fc3f7" stroke-width="6" stroke-linecap="round"/>
+    </svg></div>
+    <div class="palito" style="right:24px"><svg width="64" height="110" viewBox="0 0 64 110">
+      <line x1="32" y1="30" x2="32" y2="80" stroke="#ef5350" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="32" cy="18" r="11" fill="#ef5350"/>
+      <line x1="32" y1="48" x2="14" y2="60" stroke="#ef5350" stroke-width="6" stroke-linecap="round"/>
+      <line x1="32" y1="48" x2="50" y2="60" stroke="#ef5350" stroke-width="6" stroke-linecap="round"/>
+      <line x1="32" y1="80" x2="20" y2="102" stroke="#ef5350" stroke-width="6" stroke-linecap="round"/>
+      <line x1="32" y1="80" x2="44" y2="102" stroke="#ef5350" stroke-width="6" stroke-linecap="round"/>
+    </svg></div>`;
+  zona.appendChild(arena);
+  const botones = document.createElement("div");
+  botones.className = "botones-pelea";
+  const bPuno = document.createElement("button");
+  bPuno.className = "boton-pelea puno"; bPuno.textContent = "👊 Puño";
+  const bPata = document.createElement("button");
+  bPata.className = "boton-pelea patada"; bPata.textContent = "🦶 Patada";
+  const bBloq = document.createElement("button");
+  bBloq.className = "boton-pelea bloqueo"; bBloq.textContent = "🛡️ Bloquea";
+  botones.append(bPuno, bPata, bBloq);
+  zona.appendChild(botones);
+
+  const jugador = arena.querySelectorAll(".palito")[0];
+  const cpu = arena.querySelectorAll(".palito")[1];
+  const pintarVida = () => {
+    vidJ.querySelector(".relleno").style.width = (vidaJug / 3 * 100) + "%";
+    vidC.querySelector(".relleno").style.width = (vidaCPU / 3 * 100) + "%";
+  };
+  const efecto = (x, y, texto) => {
+    const e = document.createElement("div");
+    e.className = "efecto"; e.textContent = texto;
+    e.style.left = x + "px"; e.style.top = y + "px";
+    arena.appendChild(e);
+    setTimeout(() => e.remove(), 800);
+  };
+  const ataqueCPU = () => {
+    if (fin || gen !== MINI_GEN) return;
+    cpuAtacando = true;
+    cpu.classList.add("ataca");
+    setTimeout(() => {
+      cpu.classList.remove("ataca");
+      if (fin || gen !== MINI_GEN) return;
+      if (bloqJug) {
+        efecto(150, 80, "🛡️");
+        bloqJug = false;
+      } else {
+        vidaJug--;
+        efecto(90, 60, "💥");
+        pintarVida();
+        if (vidaJug <= 0) { fin = true; MINI_PUNTOS = vidaCPU * 10; if (cb) { cb(MINI_PUNTOS); return; } miniTermino("¡Te tumbaron! 💪", 0); return; }
+      }
+      cpuAtacando = false;
+      setTimeout(ataqueCPU, 900 + Math.random() * 900);
+    }, 500);
+  };
+  const golpeJugador = (danio, palo) => {
+    if (fin || gen !== MINI_GEN || cpuAtacando || bloqJug) return;
+    jugador.classList.add("ataca");
+    palo.classList.add("mov");
+    setTimeout(() => { jugador.classList.remove("ataca"); palo.classList.remove("mov"); }, 350);
+    vidaCPU -= danio;
+    efecto(210, 60, "💥");
+    pintarVida();
+    if (vidaCPU <= 0) { fin = true; MINI_PUNTOS = vidaJug * 10; if (cb) { cb(MINI_PUNTOS); return; } miniTermino("¡Lo venciste! 🏆", 2); return; }
+  };
+  bPuno.onclick = () => golpeJugador(1, bPuno);
+  bPata.onclick = () => golpeJugador(2, bPata);
+  bBloq.onclick = () => { bloqJug = true; jugador.classList.add("mov"); setTimeout(() => jugador.classList.remove("mov"), 250); };
+  setTimeout(ataqueCPU, 1200);
+};
+
+MINIS.shooter.montar = (zona, cfg) => {
+  const gen = MINI_GEN;
+  const cb = cfg && cfg.cb;
+  let vidas = 3, puntos = 0, fin = false;
+  document.getElementById("status-mini").textContent = "Toca los enemigos 👆";
+  const cab = document.createElement("div");
+  cab.className = "mini-cabezal";
+  cab.innerHTML = `<div class="mini-vida">Vidas <span class="barra"><span class="relleno" style="width:100%"></span></span></div><div class="mini-vida" id="mini-shooter-pts">Puntos: 0</div>`;
+  zona.appendChild(cab);
+  const arena = document.createElement("div");
+  arena.className = "arena-shooter";
+  arena.innerHTML = `<div class="torre">🏰</div>`;
+  zona.appendChild(arena);
+  const rellenoVida = cab.querySelector(".relleno");
+  const spawn = () => {
+    if (fin || gen !== MINI_GEN) return;
+    const en = document.createElement("div");
+    en.className = "enemigo";
+    en.textContent = ["👾", "👹", "🤖", "👿"][Math.floor(Math.random() * 4)];
+    en.style.left = (20 + Math.random() * (arena.clientWidth - 60)) + "px";
+    en.style.top = "-30px";
+    en.onclick = () => {
+      if (fin || gen !== MINI_GEN) return;
+      puntos++; MINI_PUNTOS = puntos;
+      document.getElementById("mini-shooter-pts").textContent = "Puntos: " + puntos;
+      tono(700 + Math.random() * 300, 0.08);
+      en.remove();
+    };
+    arena.appendChild(en);
+    let y = -30;
+    const vel = 40 + Math.random() * 60;
+    const iv = setInterval(() => {
+      if (gen !== MINI_GEN) { clearInterval(iv); return; }
+      y += vel / 20;
+      en.style.top = y + "px";
+      if (y > arena.clientHeight - 40) {
+        clearInterval(iv);
+        en.remove();
+        if (fin || gen !== MINI_GEN) return;
+        vidas--;
+        rellenoVida.style.width = (vidas / 3 * 100) + "%";
+        tono(180, 0.2, "triangle", 0.12);
+        if (vidas <= 0) { fin = true; MINI_PUNTOS = puntos; if (cb) { cb(MINI_PUNTOS); return; } miniTermino("El fuerte cayó 🏰", 0); }
+      }
+    }, 50);
+  };
+  const spawnLoop = setInterval(() => {
+    if (gen !== MINI_GEN) { clearInterval(spawnLoop); return; }
+    spawn();
+  }, 500);
+  const tiempo = setTimeout(() => {
+    if (gen !== MINI_GEN) return;
+    fin = true;
+    MINI_PUNTOS = puntos;
+    if (cb) { cb(MINI_PUNTOS); return; }
+    miniTermino(puntos >= 15 ? "¡Defensa perfecta! 🏆" : "¡Bien defendido! ⭐", puntos >= 15 ? 2 : 1);
+  }, 20000);
+};
+
+MINIS.salta.montar = (zona, cfg) => {
+  const gen = MINI_GEN;
+  const cb = cfg && cfg.cb;
+  let puntaje = 0, vidas = 3, fin = false, saltando = false, suelo = true;
+  document.getElementById("status-mini").textContent = "¡No te detengas! 🏃";
+  const cab = document.createElement("div");
+  cab.className = "mini-cabezal";
+  cab.innerHTML = `<div class="mini-vida">Vidas <span class="barra"><span class="relleno" style="width:100%"></span></span></div><div class="mini-vida" id="mini-salta-pts">Puntos: 0</div>`;
+  zona.appendChild(cab);
+  const arena = document.createElement("div");
+  arena.className = "arena-salta";
+  arena.innerHTML = `<div class="corredor">🏃</div>`;
+  zona.appendChild(arena);
+  const btnSalta = document.createElement("button");
+  btnSalta.className = "btn-saltar";
+  btnSalta.textContent = "⬆ SALTA";
+  zona.appendChild(btnSalta);
+  const corredor = arena.querySelector(".corredor");
+  const rellenoVida = cab.querySelector(".relleno");
+  const saltar = () => {
+    if (fin || saltando) return;
+    saltando = true; suelo = false;
+    corredor.classList.add("saltando");
+    setTimeout(() => {
+      corredor.classList.remove("saltando");
+      saltando = false; suelo = true;
+    }, 500);
+  };
+  btnSalta.onclick = saltar;
+  const spawn = () => {
+    if (fin || gen !== MINI_GEN) return;
+    const ob = document.createElement("div");
+    ob.className = "obstaculo";
+    ob.textContent = ["🧱", "🪨", "🌵"][Math.floor(Math.random() * 3)];
+    ob.style.left = (arena.clientWidth + 10) + "px";
+    arena.appendChild(ob);
+    let x = arena.clientWidth;
+    const vel = 90 + Math.random() * 60;
+    const iv = setInterval(() => {
+      if (gen !== MINI_GEN) { clearInterval(iv); return; }
+      x -= vel / 30;
+      ob.style.left = x + "px";
+      if (x < 24) {
+        if (suelo) {
+          clearInterval(iv);
+          ob.remove();
+          vidas--;
+          rellenoVida.style.width = (vidas / 3 * 100) + "%";
+          tono(180, 0.2, "triangle", 0.12);
+          if (vidas <= 0) { fin = true; MINI_PUNTOS = puntaje; if (cb) { cb(MINI_PUNTOS); return; } miniTermino("¡Choque! 💥", 0); return; }
+        }
+      }
+      if (x < -30) {
+        clearInterval(iv);
+        ob.remove();
+        if (suelo) { puntaje++; document.getElementById("mini-salta-pts").textContent = "Puntos: " + puntaje; tono(600, 0.06); }
+      }
+    }, 33);
+  };
+  const spawnLoop = setInterval(() => {
+    if (gen !== MINI_GEN) { clearInterval(spawnLoop); return; }
+    spawn();
+  }, 700);
+  const tiempo = setTimeout(() => {
+    if (gen !== MINI_GEN) return;
+    fin = true;
+    MINI_PUNTOS = puntaje;
+    if (cb) { cb(MINI_PUNTOS); return; }
+    miniTermino(puntaje >= 20 ? "¡Imparable! 🏆" : "¡Gran carrera! ⭐", puntaje >= 20 ? 2 : 1);
+  }, 20000);
+};
 
 construirMenu();
 </script>
