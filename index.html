@@ -208,6 +208,18 @@
   .btn-saltar { border: none; border-radius: 999px; width: 92px; height: 92px; font-size: 1.4rem; font-weight: 800; background: #ffb300; color: #25210c; cursor: pointer; }
   .btn-saltar:active { transform: scale(0.94); }
 
+  .arena-pelea.shake, .arena-shooter.shake, .arena-salta.shake { animation: sacudir 0.22s; }
+  .mini-timer { font-size: 1.3rem; font-weight: 800; color: #ffd54f; min-width: 52px; text-align: center; }
+  .mini-timer.apuro { color: #ef5350; animation: pop 0.5s infinite; }
+  .aviso-cpu { position: absolute; font-size: 1.5rem; pointer-events: none; animation: pop 0.35s infinite; z-index: 6; }
+  .fogonazo { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff59d; box-shadow: 0 0 14px #ffd54f; pointer-events: none; animation: boom 0.18s forwards; }
+  .polvo { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: rgba(160,180,210,0.55); pointer-events: none; animation: flotar 0.5s forwards; }
+  .popup-punto { position: absolute; font-size: 1.1rem; font-weight: 800; color: #ffd54f; pointer-events: none; animation: flotar 0.7s forwards; z-index: 6; }
+  .nube { position: absolute; opacity: 0.45; pointer-events: none; }
+  .colina { position: absolute; bottom: 24px; border-radius: 50% 50% 0 0; background: #22304a; pointer-events: none; }
+  .enemigo.tanque { font-size: 2.1rem; filter: drop-shadow(0 0 5px #ef5350); }
+  .vidas-ico { letter-spacing: 2px; }
+
   .palabra-ver { font-size: 2.3rem; font-weight: 800; color: #64b5f6; text-align: center; padding: 6px 20px; }
   .btn-ver {
     border: 3px solid #4a5a80; background: #2c3a57; color: #eef2f7; border-radius: 14px;
@@ -3396,17 +3408,23 @@ MINIS.pelea.montar = (zona, cfg) => {
   const gen = MINI_GEN;
   const cb = cfg && cfg.cb;
   let vidaJug = 3, vidaCPU = 3, bloqJug = false, cpuAtacando = false, fin = false;
-  let fase = 0, distJug = 34, velJug = 0;
+  let fase = 0, distJug = 34, distCpu = 234, velJug = 0, velCpu = 0;
+  let golpeJ = 0, tipoJ = null, bloqPoseJ = false, golpeC = 0, tipoC = null;
+  let tiempoRest = 30;
+  const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
   document.getElementById("status-mini").textContent = "Nivel " + Math.min(3, 1 + Math.floor(nivelDe("raz1") / 4));
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
   const vidJ = document.createElement("div");
   vidJ.className = "mini-vida";
   vidJ.innerHTML = `Tú <span class="barra"><span class="relleno" style="width:100%"></span></span>`;
+  const timer = document.createElement("div");
+  timer.className = "mini-timer";
+  timer.textContent = "30";
   const vidC = document.createElement("div");
   vidC.className = "mini-vida enemigo";
   vidC.innerHTML = `Rival <span class="barra"><span class="relleno" style="width:100%"></span></span>`;
-  cab.append(vidJ, vidC);
+  cab.append(vidJ, timer, vidC);
   zona.appendChild(cab);
   const arena = document.createElement("div");
   arena.className = "arena-pelea";
@@ -3415,9 +3433,11 @@ MINIS.pelea.montar = (zona, cfg) => {
   arena.appendChild(suelo);
   zona.appendChild(arena);
   const jSVG = palitoSVG("#4fc3f7", 72);
+  jSVG.classList.add("palito");
   jSVG.style.cssText = "position:absolute;bottom:22px;left:34px";
   const cSVG = palitoSVG("#ef5350", 72);
-  cSVG.style.cssText = "position:absolute;bottom:22px;right:34px";
+  cSVG.classList.add("palito");
+  cSVG.style.cssText = "position:absolute;bottom:22px;left:234px";
   arena.append(jSVG, cSVG);
   const botones = document.createElement("div");
   botones.className = "botones-pelea";
@@ -3450,77 +3470,141 @@ MINIS.pelea.montar = (zona, cfg) => {
     arena.appendChild(e);
     setTimeout(() => e.remove(), 800);
   };
+  const sacudirArena = () => {
+    arena.classList.remove("shake");
+    void arena.offsetWidth;
+    arena.classList.add("shake");
+  };
   let raf = 0;
   const bucle = () => {
     if (gen !== MINI_GEN || fin) return;
     fase += 0.2;
     const swing = Math.sin(fase) * 26;
-    rot(piernaIzqJ, swing, 45, 70);
-    rot(piernaDerJ, -swing, 55, 70);
-    rot(brazoIzqJ, -swing * 0.7, 50, 38);
-    rot(brazoDerJ, swing * 0.7, 50, 38);
-    rot(piernaIzqC, -swing, 45, 70);
-    rot(piernaDerC, swing, 55, 70);
-    rot(brazoIzqC, swing * 0.7, 50, 38);
-    rot(brazoDerC, -swing * 0.7, 50, 38);
-    const sd = Math.sin(fase * 0.5);
-    jSVG.style.transform = `translateY(${sd * 2}px)`;
-    cSVG.style.transform = `translateY(${-sd * 2}px)`;
-    if (velJug > 0) {
-      distJug += velJug;
-      jSVG.style.left = distJug + "px";
-      velJug *= 0.92;
-      if (velJug < 0.3) velJug = 0;
+    let aPiIzqJ = swing, aPiDerJ = -swing, aBrIzqJ = -swing * 0.7, aBrDerJ = swing * 0.7;
+    if (bloqPoseJ) { aBrIzqJ = -130; aBrDerJ = -130; }
+    if (golpeJ > 0) {
+      if (tipoJ === "puno") aBrDerJ = -85 * golpeJ;
+      else aPiDerJ = 65 * golpeJ;
+      golpeJ = Math.max(0, golpeJ - 0.07);
     }
+    rot(piernaIzqJ, aPiIzqJ, 45, 70);
+    rot(piernaDerJ, aPiDerJ, 55, 70);
+    rot(brazoIzqJ, aBrIzqJ, 50, 38);
+    rot(brazoDerJ, aBrDerJ, 50, 38);
+    let aPiIzqC = -swing, aPiDerC = swing, aBrIzqC = swing * 0.7, aBrDerC = -swing * 0.7;
+    if (golpeC > 0) {
+      if (tipoC === "puno") aBrDerC = -85 * golpeC;
+      else aPiDerC = 65 * golpeC;
+      golpeC = Math.max(0, golpeC - 0.07);
+    }
+    rot(piernaIzqC, aPiIzqC, 45, 70);
+    rot(piernaDerC, aPiDerC, 55, 70);
+    rot(brazoIzqC, aBrIzqC, 50, 38);
+    rot(brazoDerC, aBrDerC, 50, 38);
+    const sd = Math.sin(fase * 0.5);
+    distJug += velJug + (34 - distJug) * 0.05;
+    velJug *= 0.85;
+    distCpu += velCpu + (234 - distCpu) * 0.05;
+    velCpu *= 0.85;
+    jSVG.style.left = distJug + "px";
+    jSVG.style.transform = `translateY(${sd * 2}px)`;
+    cSVG.style.left = distCpu + "px";
+    cSVG.style.transform = `scaleX(-1) translateY(${-sd * 2}px)`;
     raf = requestAnimationFrame(bucle);
   };
   raf = requestAnimationFrame(bucle);
 
+  const terminar = (gano) => {
+    fin = true;
+    cancelAnimationFrame(raf);
+    clearInterval(reloj);
+    if (cb) { MINI_PUNTOS = gano === true ? vidaJug * 10 + 10 : vidaJug * 10; cb(MINI_PUNTOS); return; }
+    if (gano === null) {
+      const g = vidaJug >= vidaCPU;
+      miniTermino(g ? "¡Ganaste por tiempo! ⏱" : "¡Casi! ⏱", g ? 1 : 0);
+    } else if (gano) {
+      miniTermino("¡Lo venciste! 🏆", 2);
+    } else {
+      miniTermino("¡Te tumbaron! 💪", 0);
+    }
+  };
+
   const ataqueCPU = () => {
     if (fin || gen !== MINI_GEN) return;
-    cpuAtacando = true;
-    const esPata = Math.random() < 0.45;
-    if (esPata) rot(piernaDerC, 60, 55, 70);
-    else rot(brazoDerC, -80, 50, 38);
+    const aviso = document.createElement("div");
+    aviso.className = "aviso-cpu";
+    aviso.textContent = "⚠️";
+    aviso.style.left = (distCpu + 18) + "px";
+    aviso.style.top = "14px";
+    arena.appendChild(aviso);
+    tono(300, 0.1, "square", 0.06);
     setTimeout(() => {
-      if (gen !== MINI_GEN) return;
-      if (esPata) rot(piernaDerC, 0, 55, 70);
-      else rot(brazoDerC, 0, 50, 38);
-      if (fin) return;
-      if (bloqJug) {
-        efecto(150, 80, "🛡️");
-        bloqJug = false;
-      } else {
-        vidaJug--;
-        efecto(80, 50, "💥");
-        jSVG.classList.add("shock");
-        setTimeout(() => jSVG.classList.remove("shock"), 250);
-        pintarVida();
-        if (vidaJug <= 0) { fin = true; MINI_PUNTOS = vidaCPU * 10; cancelAnimationFrame(raf); if (cb) { cb(MINI_PUNTOS); return; } miniTermino("¡Te tumbaron! 💪", 0); return; }
-      }
-      cpuAtacando = false;
-      setTimeout(ataqueCPU, 700 + Math.random() * 800);
-    }, 300);
+      aviso.remove();
+      if (fin || gen !== MINI_GEN) return;
+      cpuAtacando = true;
+      velCpu = -18;
+      tipoC = Math.random() < 0.45 ? "pata" : "puno";
+      golpeC = 1;
+      setTimeout(() => {
+        if (gen !== MINI_GEN || fin) return;
+        if (bloqJug) {
+          efecto(distJug + 26, 60, "🛡️");
+          tono(520, 0.1, "square", 0.1);
+          vib(30);
+          bloqJug = false;
+        } else {
+          vidaJug--;
+          efecto(distJug + 18, 50, "💥");
+          tono(150, 0.15, "sawtooth", 0.12);
+          vib(80);
+          sacudirArena();
+          jSVG.classList.add("shock");
+          setTimeout(() => jSVG.classList.remove("shock"), 250);
+          pintarVida();
+          if (vidaJug <= 0) { terminar(false); return; }
+        }
+        cpuAtacando = false;
+        setTimeout(ataqueCPU, 900 + Math.random() * 900);
+      }, 300);
+    }, 550);
   };
+
   const golpeJugador = (danio, esPata) => {
     if (fin || gen !== MINI_GEN || cpuAtacando || bloqJug) return;
-    if (esPata) rot(piernaDerJ, 60, 55, 70);
-    else rot(brazoDerJ, -80, 50, 38);
-    velJug = 16;
-    setTimeout(() => {
-      if (esPata) rot(piernaDerJ, 0, 55, 70);
-      else rot(brazoDerJ, 0, 50, 38);
-    }, 260);
+    tipoJ = esPata ? "pata" : "puno";
+    golpeJ = 1;
+    velJug = 18;
+    tono(esPata ? 220 : 330, 0.08, "square", 0.1);
+    vib(40);
     vidaCPU -= danio;
-    efecto(230, 50, "💥");
-    cSVG.classList.add("shock");
-    setTimeout(() => cSVG.classList.remove("shock"), 250);
-    pintarVida();
-    if (vidaCPU <= 0) { fin = true; MINI_PUNTOS = vidaJug * 10; cancelAnimationFrame(raf); if (cb) { cb(MINI_PUNTOS); return; } miniTermino("¡Lo venciste! 🏆", 2); return; }
+    setTimeout(() => {
+      if (gen !== MINI_GEN || fin) return;
+      efecto(distCpu + 18, 50, "💥");
+      sacudirArena();
+      cSVG.classList.add("shock");
+      setTimeout(() => cSVG.classList.remove("shock"), 250);
+      pintarVida();
+      if (vidaCPU <= 0) terminar(true);
+    }, 180);
   };
+
   bPuno.onclick = () => golpeJugador(1, false);
   bPata.onclick = () => golpeJugador(2, true);
-  bBloq.onclick = () => { bloqJug = true; rot(brazoIzqJ, -130, 50, 38); rot(brazoDerJ, -130, 50, 38); setTimeout(() => { if (gen === MINI_GEN) { rot(brazoIzqJ, 0, 50, 38); rot(brazoDerJ, 0, 50, 38); } }, 550); };
+  bBloq.onclick = () => {
+    if (fin || gen !== MINI_GEN) return;
+    bloqJug = true; bloqPoseJ = true;
+    tono(440, 0.08, "sine", 0.08);
+    setTimeout(() => { if (gen === MINI_GEN) bloqPoseJ = false; }, 600);
+  };
+
+  const reloj = setInterval(() => {
+    if (gen !== MINI_GEN || fin) { clearInterval(reloj); return; }
+    tiempoRest--;
+    timer.textContent = tiempoRest;
+    if (tiempoRest <= 5) timer.classList.add("apuro");
+    if (tiempoRest <= 0) terminar(null);
+  }, 1000);
+
   setTimeout(ataqueCPU, 1200);
 };
 
