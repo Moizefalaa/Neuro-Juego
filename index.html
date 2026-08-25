@@ -3411,8 +3411,9 @@ MINIS.pelea.montar = (zona, cfg) => {
   let fase = 0, distJug = 34, distCpu = 234, velJug = 0, velCpu = 0;
   let golpeJ = 0, tipoJ = null, bloqPoseJ = false, golpeC = 0, tipoC = null;
   let tiempoRest = 30;
+  const nivel = Math.min(3, 1 + Math.floor(nivelDe("raz1") / 4));
   const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
-  document.getElementById("status-mini").textContent = "Nivel " + Math.min(3, 1 + Math.floor(nivelDe("raz1") / 4));
+  document.getElementById("status-mini").textContent = "Nivel " + nivel;
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
   const vidJ = document.createElement("div");
@@ -3564,9 +3565,9 @@ MINIS.pelea.montar = (zona, cfg) => {
           if (vidaJug <= 0) { terminar(false); return; }
         }
         cpuAtacando = false;
-        setTimeout(ataqueCPU, 900 + Math.random() * 900);
+        setTimeout(ataqueCPU, (1100 - nivel * 200) + Math.random() * 700);
       }, 300);
-    }, 550);
+    }, 700 - nivel * 120);
   };
 
   const golpeJugador = (danio, esPata) => {
