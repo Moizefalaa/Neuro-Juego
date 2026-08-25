@@ -204,7 +204,7 @@
   .arena-salta { position: relative; width: 340px; height: 210px; background: linear-gradient(#1a2332, #2c3a57); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; }
   .corredor { position: absolute; bottom: 22px; left: 24px; transform-origin: 50% 100%; will-change: transform; }
   .obstaculo { position: absolute; bottom: 22px; font-size: 1.8rem; }
-  .obstaculo.aereo { bottom: 96px; font-size: 1.4rem; }
+  .obstaculo.aereo { bottom: 122px; font-size: 1.4rem; }
   .btn-saltar { border: none; border-radius: 999px; width: 92px; height: 92px; font-size: 1.4rem; font-weight: 800; background: #ffb300; color: #25210c; cursor: pointer; }
   .btn-saltar:active { transform: scale(0.94); }
 
@@ -3612,6 +3612,7 @@ MINIS.shooter.montar = (zona, cfg) => {
   const gen = MINI_GEN;
   const cb = cfg && cfg.cb;
   let vidas = 3, puntos = 0, fin = false;
+  const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
   document.getElementById("status-mini").textContent = "Toca y dispara 👆";
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
@@ -3624,14 +3625,23 @@ MINIS.shooter.montar = (zona, cfg) => {
   torre.innerHTML = `<svg width="64" height="70" viewBox="0 0 100 110">
     <line x1="50" y1="28" x2="50" y2="72" stroke="#ffb300" stroke-width="11" stroke-linecap="round"/>
     <circle cx="50" cy="16" r="12" fill="#ffb300"/>
-    <line x1="50" y1="40" x2="88" y2="40" stroke="#ffb300" stroke-width="9" stroke-linecap="round"/>
+    <g class="canon"><line x1="50" y1="40" x2="88" y2="40" stroke="#ffd54f" stroke-width="9" stroke-linecap="round"/></g>
     <g class="pb-pierna-izq"><line x1="45" y1="70" x2="32" y2="106" stroke="#ffb300" stroke-width="9" stroke-linecap="round"/></g>
     <g class="pb-pierna-der"><line x1="55" y1="70" x2="68" y2="106" stroke="#ffb300" stroke-width="9" stroke-linecap="round"/></g>
   </svg>`;
   arena.appendChild(torre);
   zona.appendChild(arena);
+  const canon = torre.querySelector(".canon");
   const rellenoVida = cab.querySelector(".relleno");
   const enemigos = [];
+  const sacudirArena = () => { arena.classList.remove("shake"); void arena.offsetWidth; arena.classList.add("shake"); };
+  const popup = (x, y, txt) => {
+    const e = document.createElement("div");
+    e.className = "popup-punto"; e.textContent = txt;
+    e.style.left = x + "px"; e.style.top = y + "px";
+    arena.appendChild(e);
+    setTimeout(() => e.remove(), 700);
+  };
   const explotar = (x, y) => {
     const e = document.createElement("div");
     e.className = "explosion"; e.textContent = "💥";
@@ -3641,14 +3651,15 @@ MINIS.shooter.montar = (zona, cfg) => {
   };
   const spawn = () => {
     if (fin || gen !== MINI_GEN) return;
+    const tanque = Math.random() < 0.22;
     const en = document.createElement("div");
-    en.className = "enemigo";
-    en.textContent = ["👾", "👹", "🤖", "👿"][Math.floor(Math.random() * 4)];
+    en.className = "enemigo" + (tanque ? " tanque" : "");
+    en.textContent = tanque ? "👹" : ["👾", "🤖", "👿"][Math.floor(Math.random() * 3)];
     const x0 = 20 + Math.random() * (arena.clientWidth - 60);
     en.style.left = x0 + "px";
     en.style.top = "-40px";
     arena.appendChild(en);
-    enemigos.push({ el: en, x: x0, y: -40, amp: 30 + Math.random() * 50, vel: 2 + Math.random() * 3, fase: Math.random() * 6.28 });
+    enemigos.push({ el: en, x: x0, y: -40, amp: 25 + Math.random() * 45, vel: tanque ? 1.3 + Math.random() : 2 + Math.random() * 3, fase: Math.random() * 6.28, hp: tanque ? 2 : 1, tanque });
   };
   const spawnLoop = setInterval(() => {
     if (gen !== MINI_GEN) { clearInterval(spawnLoop); return; }
@@ -3656,15 +3667,23 @@ MINIS.shooter.montar = (zona, cfg) => {
   }, 420);
   const disparar = (ex, ey) => {
     if (fin || gen !== MINI_GEN) return;
-    const tx = arena.clientWidth / 2, ty = arena.clientHeight - 26;
+    const tx = arena.clientWidth / 2, ty = arena.clientHeight - 62;
+    const dx = ex - tx, dy = ey - ty;
+    const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    canon.setAttribute("transform", `rotate(${ang} 50 40)`);
+    const fog = document.createElement("div");
+    fog.className = "fogonazo";
+    fog.style.left = (tx - 8) + "px"; fog.style.top = (ty - 8) + "px";
+    arena.appendChild(fog);
+    setTimeout(() => fog.remove(), 200);
     const p = document.createElement("div");
     p.className = "proyectil";
     p.style.left = (tx - 5) + "px"; p.style.top = (ty - 5) + "px";
     arena.appendChild(p);
     tono(900, 0.06);
-    const dx = ex - tx, dy = ey - ty;
+    vib(15);
     const dist = Math.hypot(dx, dy) || 1;
-    const vx = dx / dist * 11, vy = dy / dist * 11;
+    const vx = dx / dist * 12, vy = dy / dist * 12;
     let x = tx, y = ty;
     const rafP = () => {
       if (gen !== MINI_GEN) { p.remove(); return; }
@@ -3675,12 +3694,22 @@ MINIS.shooter.montar = (zona, cfg) => {
         const en = enemigos[i];
         if (Math.abs(en.x - x) < 22 && Math.abs(en.y - y) < 22) {
           hit = true;
-          explotar(en.x, en.y);
-          en.el.remove();
-          enemigos.splice(i, 1);
-          puntos++; MINI_PUNTOS = puntos;
-          document.getElementById("mini-shooter-pts").textContent = "Puntos: " + puntos;
-          tono(700 + Math.random() * 300, 0.08);
+          en.hp--;
+          if (en.hp <= 0) {
+            explotar(en.x, en.y);
+            en.el.remove();
+            enemigos.splice(i, 1);
+            const pts = en.tanque ? 3 : 1;
+            puntos += pts; MINI_PUNTOS = puntos;
+            popup(en.x, en.y, "+" + pts);
+            document.getElementById("mini-shooter-pts").textContent = "Puntos: " + puntos;
+            tono(700 + Math.random() * 300, 0.08);
+            vib(25);
+          } else {
+            tono(400, 0.05, "square", 0.08);
+            en.el.style.transform = "scale(1.25)";
+            setTimeout(() => { if (en.el.isConnected) en.el.style.transform = ""; }, 120);
+          }
           break;
         }
       }
@@ -3705,6 +3734,8 @@ MINIS.shooter.montar = (zona, cfg) => {
         vidas--;
         rellenoVida.style.width = (vidas / 3 * 100) + "%";
         tono(180, 0.2, "triangle", 0.12);
+        vib(60);
+        sacudirArena();
         if (vidas <= 0) { fin = true; MINI_PUNTOS = puntos; if (cb) { cb(MINI_PUNTOS); return; } miniTermino("El fuerte cayó 🏰", 0); return; }
       }
     }
@@ -3727,20 +3758,44 @@ MINIS.salta.montar = (zona, cfg) => {
   const gen = MINI_GEN;
   const cb = cfg && cfg.cb;
   let puntaje = 0, vidas = 3, fin = false;
-  let y = 0, vy = 0, enAire = false;
-  document.getElementById("status-mini").textContent = "¡Salta! ⬆";
+  let y = 0, vy = 0, enAire = false, contaPolvo = 0;
+  const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
+  document.getElementById("status-mini").textContent = "Salta los de abajo, quédate con los de arriba ⬆";
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
   cab.innerHTML = `<div class="mini-vida">Vidas <span class="barra"><span class="relleno" style="width:100%"></span></span></div><div class="mini-vida" id="mini-salta-pts">Puntos: 0</div>`;
   zona.appendChild(cab);
   const arena = document.createElement("div");
   arena.className = "arena-salta";
+  const nubes = [];
+  for (let i = 0; i < 3; i++) {
+    const n = document.createElement("div");
+    n.className = "nube";
+    n.textContent = "☁️";
+    n.style.fontSize = (1 + Math.random() * 0.7) + "rem";
+    n.style.top = (8 + Math.random() * 46) + "px";
+    const nx = Math.random() * 340;
+    n.style.left = nx + "px";
+    arena.appendChild(n);
+    nubes.push({ el: n, x: nx, vel: 0.3 + Math.random() * 0.4 });
+  }
+  const colinas = [];
+  for (let i = 0; i < 2; i++) {
+    const c = document.createElement("div");
+    c.className = "colina";
+    c.style.width = "130px"; c.style.height = "42px";
+    const cx = i * 210;
+    c.style.left = cx + "px";
+    arena.appendChild(c);
+    colinas.push({ el: c, x: cx });
+  }
   const suelo = document.createElement("div");
   suelo.className = "mini-suelo";
   arena.appendChild(suelo);
   zona.appendChild(arena);
   const corredor = palitoSVG("#4fc3f7", 58);
-  corredor.className = "corredor";
+  corredor.classList.add("palito");
+  corredor.className = "corredor palito";
   arena.appendChild(corredor);
   const btnSalta = document.createElement("button");
   btnSalta.className = "btn-saltar";
@@ -3752,12 +3807,30 @@ MINIS.salta.montar = (zona, cfg) => {
   const brazoI = corredor.querySelector(".pb-brazo-izq");
   const brazoD = corredor.querySelector(".pb-brazo-der");
   const rot = (g, ang, px, py) => g.setAttribute("transform", `rotate(${ang} ${px} ${py})`);
+  const sacudirArena = () => { arena.classList.remove("shake"); void arena.offsetWidth; arena.classList.add("shake"); };
+  const polvo = () => {
+    const p = document.createElement("div");
+    p.className = "polvo";
+    p.style.left = (20 + Math.random() * 24) + "px";
+    p.style.bottom = "20px";
+    arena.appendChild(p);
+    setTimeout(() => p.remove(), 500);
+  };
+  const popup = () => {
+    const e = document.createElement("div");
+    e.className = "popup-punto"; e.textContent = "+1";
+    e.style.left = "44px"; e.style.top = "70px";
+    arena.appendChild(e);
+    setTimeout(() => e.remove(), 700);
+  };
   const obstaculos = [];
   let fase = 0, vel = 4;
   const saltar = () => {
     if (fin || enAire) return;
     enAire = true;
-    vy = -9.5;
+    vy = 9;
+    tono(520, 0.08, "sine", 0.08);
+    vib(15);
   };
   btnSalta.onclick = saltar;
   const spawn = () => {
@@ -3765,43 +3838,59 @@ MINIS.salta.montar = (zona, cfg) => {
     const ob = document.createElement("div");
     const aereo = Math.random() < 0.3;
     ob.className = "obstaculo" + (aereo ? " aereo" : "");
-    ob.textContent = aereo ? ["🐦", "🦇", "🌂"][Math.floor(Math.random() * 3)] : ["🧱", "🪨", "🌵", "🗿"][Math.floor(Math.random() * 4)];
+    ob.textContent = aereo ? ["🐦", "🦇", "🪁"][Math.floor(Math.random() * 3)] : ["🧱", "🪨", "🌵", "🗿"][Math.floor(Math.random() * 4)];
     ob.style.left = (arena.clientWidth + 10) + "px";
     arena.appendChild(ob);
-    obstaculos.push({ el: ob, aereo, x: arena.clientWidth });
+    obstaculos.push({ el: ob, aereo, x: arena.clientWidth, resuelto: false });
   };
   const spawnLoop = setInterval(() => {
     if (gen !== MINI_GEN) { clearInterval(spawnLoop); return; }
     spawn();
-  }, 520);
+  }, 560);
   const bucle = () => {
     if (gen !== MINI_GEN || fin) return;
-    fase += 0.25;
-    vel = Math.min(11, 4 + puntaje * 0.25);
-    const swing = Math.sin(fase) * 30;
+    fase += 0.3;
+    vel = Math.min(10, 4 + puntaje * 0.2);
+    const swing = Math.sin(fase) * 32;
     const run = enAire ? 0 : swing;
     rot(piernaI, run, 45, 70);
     rot(piernaD, -run, 55, 70);
     rot(brazoI, -run * 0.6, 50, 38);
     rot(brazoD, run * 0.6, 50, 38);
+    for (const n of nubes) {
+      n.x -= n.vel;
+      if (n.x < -30) n.x = 350;
+      n.el.style.left = n.x + "px";
+    }
+    for (const c of colinas) {
+      c.x -= vel * 0.25;
+      if (c.x < -130) c.x = 350;
+      c.el.style.left = c.x + "px";
+    }
     if (enAire) {
-      vy += 0.45;
+      vy -= 0.55;
       y += vy;
-      if (y >= 0) { y = 0; vy = 0; enAire = false; }
+      if (y <= 0) { y = 0; vy = 0; enAire = false; polvo(); }
       corredor.style.bottom = (22 + y) + "px";
+    } else {
+      contaPolvo++;
+      if (contaPolvo % 9 === 0) polvo();
     }
     for (let i = obstaculos.length - 1; i >= 0; i--) {
       const ob = obstaculos[i];
       ob.x -= vel;
       ob.el.style.left = ob.x + "px";
-      if (ob.x < 18) {
-        const impacto = ob.aereo ? (y > 18) : (y < 18);
-        if (impacto) {
+      if (!ob.resuelto && ob.x < 72 && ob.x > 8) {
+        const choca = ob.aereo ? (y > 50) : (y < 22);
+        if (choca) {
+          ob.resuelto = true;
           ob.el.remove();
           obstaculos.splice(i, 1);
           vidas--;
           rellenoVida.style.width = (vidas / 3 * 100) + "%";
           tono(180, 0.2, "triangle", 0.12);
+          vib(70);
+          sacudirArena();
           if (vidas <= 0) { fin = true; MINI_PUNTOS = puntaje; if (cb) { cb(MINI_PUNTOS); return; } miniTermino("¡Choque! 💥", 0); return; }
           continue;
         }
@@ -3809,9 +3898,12 @@ MINIS.salta.montar = (zona, cfg) => {
       if (ob.x < -34) {
         ob.el.remove();
         obstaculos.splice(i, 1);
-        puntaje++;
-        document.getElementById("mini-salta-pts").textContent = "Puntos: " + puntaje;
-        tono(600, 0.06);
+        if (!ob.resuelto) {
+          puntaje++;
+          popup();
+          document.getElementById("mini-salta-pts").textContent = "Puntos: " + puntaje;
+          tono(620, 0.06);
+        }
       }
     }
     requestAnimationFrame(bucle);
