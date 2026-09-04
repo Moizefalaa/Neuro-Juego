@@ -194,7 +194,8 @@
   .boton-pelea.patada { background: #1565c0; }
   .boton-pelea.bloqueo { background: #2e7d32; }
 
-  .arena-shooter { position: relative; width: 340px; height: 240px; background: linear-gradient(#1a2332, #2c3a57); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; touch-action: none; }
+  .arena-shooter { position: relative; width: min(560px, 94vw); height: 360px; margin: 0 auto; background: linear-gradient(#1a2332, #2c3a57); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; touch-action: none; }
+  .zona-mini, #zona-mini { width: 100%; max-width: 600px; margin: 0 auto; }
   .torre { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); }
   .proyectil { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #ffd54f; box-shadow: 0 0 8px #ffb300; pointer-events: none; }
   .enemigo { position: absolute; font-size: 1.7rem; cursor: pointer; pointer-events: auto; }
@@ -1893,7 +1894,27 @@ GAMES.ver1 = () => {
     { p: "Médico", ok: "Profesiones", ops: ["Frutas", "Colores", "Muebles"] },
     { p: "Panadero", ok: "Profesiones", ops: ["Animales", "Vehículos", "Instrumentos"] },
     { p: "Camisa", ok: "Ropa", ops: ["Vehículos", "Deportes", "Animales"] },
-    { p: "Zapato", ok: "Ropa", ops: ["Colores", "Frutas", "Muebles"] }
+    { p: "Zapato", ok: "Ropa", ops: ["Colores", "Frutas", "Muebles"] },
+    { p: "Uva", ok: "Frutas", ops: ["Muebles", "Vehículos", "Ropa"] },
+    { p: "Fresa", ok: "Frutas", ops: ["Deportes", "Profesiones", "Instrumentos"] },
+    { p: "Sandía", ok: "Frutas", ops: ["Animales", "Ropa", "Vehículos"] },
+    { p: "Elefante", ok: "Animales", ops: ["Frutas", "Muebles", "Instrumentos"] },
+    { p: "Pájaro", ok: "Animales", ops: ["Colores", "Vehículos", "Ropa"] },
+    { p: "Pez", ok: "Animales", ops: ["Deportes", "Frutas", "Muebles"] },
+    { p: "Rojo", ok: "Colores", ops: ["Animales", "Muebles", "Deportes"] },
+    { p: "Amarillo", ok: "Colores", ops: ["Profesiones", "Vehículos", "Frutas"] },
+    { p: "Sofá", ok: "Muebles", ops: ["Frutas", "Deportes", "Colores"] },
+    { p: "Lámpara", ok: "Muebles", ops: ["Animales", "Ropa", "Vehículos"] },
+    { p: "Tenis", ok: "Deportes", ops: ["Muebles", "Frutas", "Ropa"] },
+    { p: "Ciclismo", ok: "Deportes", ops: ["Colores", "Animales", "Profesiones"] },
+    { p: "Moto", ok: "Vehículos", ops: ["Frutas", "Ropa", "Colores"] },
+    { p: "Tren", ok: "Vehículos", ops: ["Muebles", "Deportes", "Frutas"] },
+    { p: "Piano", ok: "Instrumentos", ops: ["Ropa", "Vehículos", "Deportes"] },
+    { p: "Flauta", ok: "Instrumentos", ops: ["Muebles", "Colores", "Frutas"] },
+    { p: "Enfermera", ok: "Profesiones", ops: ["Vehículos", "Frutas", "Deportes"] },
+    { p: "Profesor", ok: "Profesiones", ops: ["Colores", "Muebles", "Animales"] },
+    { p: "Pantalón", ok: "Ropa", ops: ["Frutas", "Instrumentos", "Vehículos"] },
+    { p: "Sombrero", ok: "Ropa", ops: ["Deportes", "Muebles", "Colores"] }
   ];
   const robar = baraja(BANCO);
   return crearMotor("ver1", 6, (gen, motor) => {
@@ -1929,7 +1950,11 @@ GAMES.ver2 = () => {
     { cat: "Animales", items: ["Perro", "Gato", "Caballo", "Pájaro", "Pez"] },
     { cat: "Vehículos", items: ["Coche", "Bicicleta", "Avión", "Barco", "Tren"] },
     { cat: "Colores", items: ["Rojo", "Azul", "Verde", "Amarillo", "Naranja"] },
-    { cat: "Ropa", items: ["Camisa", "Pantalón", "Zapato", "Gorra", "Abrigo"] }
+    { cat: "Ropa", items: ["Camisa", "Pantalón", "Zapato", "Gorra", "Abrigo"] },
+    { cat: "Deportes", items: ["Fútbol", "Tenis", "Natación", "Ciclismo", "Básquet"] },
+    { cat: "Instrumentos", items: ["Guitarra", "Piano", "Tambor", "Flauta", "Violín"] },
+    { cat: "Muebles", items: ["Silla", "Mesa", "Sofá", "Cama", "Lámpara"] },
+    { cat: "Comidas", items: ["Pan", "Queso", "Arroz", "Huevo", "Leche"] }
   ];
   const robarCat = baraja(CATEGORIAS);
   return crearMotor("ver2", 6, (gen, motor) => {
@@ -1965,9 +1990,12 @@ GAMES.ver3 = () => {
     ["Feliz", "Contento"], ["Grande", "Enorme"], ["Bonito", "Hermoso"], ["Rápido", "Veloz"],
     ["Casa", "Hogar"], ["Coche", "Automóvil"], ["Listo", "Inteligente"], ["Fuerte", "Potente"],
     ["Callado", "Silencioso"], ["Frío", "Helado"], ["Alumno", "Estudiante"], ["Bonito", "Bello"],
-    ["Doctor", "Médico"], ["Regalo", "Presente"], ["Niño", "Chico"], ["Luchar", "Pelear"]
+    ["Doctor", "Médico"], ["Regalo", "Presente"], ["Niño", "Chico"], ["Luchar", "Pelear"],
+    ["Triste", "Apesadumbrado"], ["Alegre", "Contento"], ["Pequeño", "Diminuto"], ["Lento", "Despacio"],
+    ["Amigo", "Compañero"], ["Comida", "Alimento"], ["Juguete", "Entretenimiento"], ["Escuela", "Colegio"],
+    ["Valiente", "Osado"], ["Rico", "Sabroso"], ["Oscuro", "Tenebroso"], ["Limpio", "Aseado"]
   ];
-  const EXTRA = ["Mesita", "Tren", "Nube", "Lámpara", "Zapato", "Silla"];
+  const EXTRA = ["Mesita", "Tren", "Nube", "Lámpara", "Zapato", "Silla", "Pelota", "Espejo", "Tijera", "Reloj", "Llave", "Carta"];
   const robar = baraja(PARES);
   return crearMotor("ver3", 6, (gen, motor) => {
     const { estado } = motor;
@@ -2161,6 +2189,58 @@ GAMES.ver4 = () => {
         { q: "¿Por qué no vinieron varios amigos?", ok: "Tenían tareas", ops: ["Estaban enfermos", "No tenían permiso"] },
         { q: "¿Cómo se sintió Iván al principio?", ok: "De mal humor", ops: ["Muy feliz", "Nervioso"] },
         { q: "¿Qué pasó al final?", ok: "La pasó muy bien", ops: ["Canceló la fiesta", "Se fue a su cuarto"] }
+      ] },
+    { dif: 1, t: "Pedro fue al mercado con su mamá. Compraron manzanas y queso. En el camino de vuelta, Pedro cargó la bolsa pequeña para ayudar.",
+      qs: [
+        { q: "¿A dónde fue Pedro?", ok: "Al mercado", ops: ["Al parque", "Al cine"] },
+        { q: "¿Qué compraron?", ok: "Manzanas y queso", ops: ["Pan y leche", "Juguetes"] },
+        { q: "¿Cómo ayudó Pedro?", ok: "Cargó la bolsa pequeña", ops: ["Pagó la cuenta", "Empujó el carro"] }
+      ] },
+    { dif: 1, t: "El gatito de Emma se escondió debajo de la cama. Emma lo llamó con su plato de comida y el gatito salió corriendo a comer.",
+      qs: [
+        { q: "¿Dónde se escondió el gatito?", ok: "Debajo de la cama", ops: ["En el patio", "En la cocina"] },
+        { q: "¿Cómo lo llamó Emma?", ok: "Con su plato de comida", ops: ["Con un juguete", "Con un silbido"] },
+        { q: "¿Qué hizo el gatito?", ok: "Salió a comer", ops: ["Se durmió", "Se escapó"] }
+      ] },
+    { dif: 2, t: "Felipe perdió su balón en el recreo. Lo buscó detrás de los árboles y junto a la reja. Un niño de otro curso lo había encontrado y se lo devolvió.",
+      qs: [
+        { q: "¿Qué perdió Felipe?", ok: "Su balón", ops: ["Su mochila", "Su colación"] },
+        { q: "¿Dónde lo buscó?", ok: "Detrás de los árboles y la reja", ops: ["En la sala", "En el baño"] },
+        { q: "¿Quién lo había encontrado?", ok: "Un niño de otro curso", ops: ["Su profesor", "El portero"] }
+      ] },
+    { dif: 2, t: "Antonia se puso sus botas nuevas para ir al cerro. A mitad del camino se cansó, así que descansaron, tomaron agua y siguieron. Al llegar arriba, vieron toda la ciudad.",
+      qs: [
+        { q: "¿Qué se puso Antonia?", ok: "Sus botas nuevas", ops: ["Sus zapatillas viejas", "Sus sandalias"] },
+        { q: "¿Qué hicieron al cansarse?", ok: "Descansaron y tomaron agua", ops: ["Se devolvieron", "Llamaron por ayuda"] },
+        { q: "¿Qué vieron desde arriba?", ok: "Toda la ciudad", ops: ["El mar", "Un arcoíris"] }
+      ] },
+    { dif: 3, t: "El curso de Javiera juntó tapitas para reciclar. Cada semana las contaban y las guardaban en cajas. Cuando llenaron diez cajas, las llevaron al punto limpio y con lo reunido compraron libros para la biblioteca.",
+      qs: [
+        { q: "¿Qué juntó el curso?", ok: "Tapitas para reciclar", ops: ["Monedas", "Botellas enteras"] },
+        { q: "¿Cuántas cajas llenaron?", ok: "Diez cajas", ops: ["Tres cajas", "Cien cajas"] },
+        { q: "¿Qué compraron con lo reunido?", ok: "Libros para la biblioteca", ops: ["Pelotas nuevas", "Dulces"] },
+        { q: "¿Dónde llevaron las cajas?", ok: "Al punto limpio", ops: ["A la feria", "Al colegio vecino"] }
+      ] },
+    { dif: 3, t: "Cristóbal cuidó al perro del vecino durante el fin de semana. Le dio comida dos veces al día y lo sacó a pasear con correa. El domingo, el vecino volvió contento y le agradeció con un libro de aventuras.",
+      qs: [
+        { q: "¿Qué cuidó Cristóbal?", ok: "El perro del vecino", ops: ["El gato de su tía", "Los peces"] },
+        { q: "¿Cómo lo paseó?", ok: "Con correa", ops: ["Suelto en la calle", "En auto"] },
+        { q: "¿Qué le regaló el vecino?", ok: "Un libro de aventuras", ops: ["Dinero", "Un videojuego"] },
+        { q: "¿Cuántas veces le daba comida?", ok: "Dos veces al día", ops: ["Una vez", "Cada hora"] }
+      ] },
+    { dif: 4, t: "En la feria científica, el proyecto de Emilia no funcionó frente al jurado. En vez de rendirse, revisó las conexiones, encontró un cable suelto y pidió repetir la prueba. El jurado aceptó, el experimento resultó y su grupo obtuvo el segundo lugar.",
+      qs: [
+        { q: "¿Qué le pasó al proyecto de Emilia?", ok: "No funcionó frente al jurado", ops: ["Se perdió", "Se lo copiaron"] },
+        { q: "¿Qué encontró al revisar?", ok: "Un cable suelto", ops: ["Que faltaba una pieza", "Que estaba roto"] },
+        { q: "¿Qué pidió al jurado?", ok: "Repetir la prueba", ops: ["Más puntos", "Cambiar de jurado"] },
+        { q: "¿Qué lugar obtuvieron?", ok: "El segundo lugar", ops: ["El primer lugar", "El último lugar"] }
+      ] },
+    { dif: 4, t: "Tomás discutió con su mejor amigo por un juego y dejaron de hablarse una semana. Después, Tomás escribió una carta pidiendo disculpas y explicando cómo se sentía. Su amigo la leyó, conversaron en el recreo y acordaron turnarse para elegir los juegos.",
+      qs: [
+        { q: "¿Por qué discutieron?", ok: "Por un juego", ops: ["Por dinero", "Por una prueba"] },
+        { q: "¿Qué hizo Tomás después?", ok: "Escribió una carta de disculpas", ops: ["Le compró un regalo", "Lo ignoró"] },
+        { q: "¿Dónde conversaron?", ok: "En el recreo", ops: ["En la sala", "Por teléfono"] },
+        { q: "¿Qué acordaron?", ok: "Turnarse para elegir juegos", ops: ["No jugar más", "Cambiarse de curso"] }
       ] }
   ];
   const robarPara = (niv) => {
@@ -3217,12 +3297,13 @@ function montarDueloShooter(mapaId, duracion, miGen) {
   const info = document.createElement("div");
   info.className = "duelo-shooter-info";
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
-  info.textContent = `${mapa.icono} ${mapa.nombre} - 40s ¡Dispara sin parar!`;
+  info.textContent = `${mapa.icono} ${mapa.nombre} - ${duracion}s ¡Dispara sin parar!`;
   arena.appendChild(info);
   const zona = document.createElement("div");
   arena.appendChild(zona);
   MINI_GEN++;
   const genLocal = MINI_GEN;
+  let dueloFin = false;
   const enviados = { ultimo: 0 };
   const enviarPuntos = (pts) => {
     if (Date.now() - enviados.ultimo < 120) return;
@@ -3231,8 +3312,10 @@ function montarDueloShooter(mapaId, duracion, miGen) {
   };
   MINIS.shooter.montar(zona, {
     mapa: mapaId,
+    duracion,
     cb: (pts) => {
-      if (miGen !== SHOOTER_DUELO_GEN) return;
+      if (miGen !== SHOOTER_DUELO_GEN || dueloFin) return;
+      dueloFin = true;
       PTS_MIO = pts;
       pintarMarcador();
       if (CONN) CONN.send({ t: "shooter_fin", n: pts });
@@ -3245,14 +3328,15 @@ function montarDueloShooter(mapaId, duracion, miGen) {
     if (pts !== PTS_MIO) { PTS_MIO = pts; pintarMarcador(); enviarPuntos(pts); }
   }, 200);
   setTimeout(() => {
-    if (miGen !== SHOOTER_DUELO_GEN) return;
+    if (miGen !== SHOOTER_DUELO_GEN || dueloFin) return;
     if (genLocal === MINI_GEN) {
+      dueloFin = true;
       MINI_PUNTOS = MINI_PUNTOS || 0;
       PTS_MIO = MINI_PUNTOS;
       if (CONN) CONN.send({ t: "shooter_fin", n: PTS_MIO });
       terminarDueloShooter();
     }
-  }, duracion * 1000 + 500);
+  }, duracion * 1000 + 800);
 }
 
 function terminarDueloShooter() {
@@ -3565,7 +3649,11 @@ const SHOOTER_MAPAS = {
   castillo: { nombre: "Castillo", icono: "🏰", fondo: "linear-gradient(#1a2332, #2c3a57)", color: "#ffb300", enemigos: ["👾","🤖","👿"], tanque: "👹", deco: "🧱" },
   bosque:   { nombre: "Bosque",   icono: "🌲", fondo: "linear-gradient(#0d2818, #1e4d2b)", color: "#8bc34a", enemigos: ["🐺","🦇","🕷️"], tanque: "🐻", deco: "🌳" },
   desierto: { nombre: "Desierto", icono: "🏜️", fondo: "linear-gradient(#3a2505, #7a5a10)", color: "#ff8f00", enemigos: ["🦂","🐍","🦀"], tanque: "🦁", deco: "🌵" },
-  espacio:  { nombre: "Espacio",  icono: "🚀", fondo: "linear-gradient(#0a0a1a, #1a1040)", color: "#64b5f6", enemigos: ["👽","🛰️","☄️"], tanque: "🛸", deco: "⭐" }
+  espacio:  { nombre: "Espacio",  icono: "🚀", fondo: "linear-gradient(#0a0a1a, #1a1040)", color: "#64b5f6", enemigos: ["👽","🛰️","☄️"], tanque: "🛸", deco: "⭐" },
+  oceano:   { nombre: "Océano",   icono: "🌊", fondo: "linear-gradient(#013a5b, #0190b0)", color: "#4dd0e1", enemigos: ["🐙","🦈","🐠"], tanque: "🐳", deco: "🐚" },
+  ciudad:   { nombre: "Ciudad",   icono: "🌃", fondo: "linear-gradient(#141428, #3c2a5e)", color: "#ba68c8", enemigos: ["🚗","🚁","🤖"], tanque: "🦹", deco: "🏢" },
+  volcan:   { nombre: "Volcán",   icono: "🌋", fondo: "linear-gradient(#2b0a0a, #7a2a00)", color: "#ff7043", enemigos: ["🦎","🦂","🔥"], tanque: "🐉", deco: "🪨" },
+  invierno: { nombre: "Invierno", icono: "❄️", fondo: "linear-gradient(#1c2f4a, #7fa8c9)", color: "#b3e5fc", enemigos: ["🐧","⛄","🦉"], tanque: "🐻‍❄️", deco: "🎄" }
 };
 let SHOOTER_MAPA_ACTUAL = "castillo";
 let SHOOTER_DUELO_GEN = 0;
@@ -3877,11 +3965,11 @@ MINIS.shooter.montar = (zona, cfg) => {
     d.style.right = (i === 1 ? "8px" : "auto");
     arena.appendChild(d);
   }
-  if (mapaId === "espacio") {
-    for (let i = 0; i < 6; i++) {
+  if (mapaId === "espacio" || mapaId === "invierno") {
+    for (let i = 0; i < 8; i++) {
       const s = document.createElement("div");
-      s.textContent = "·";
-      s.style.cssText = `position:absolute;left:${10+Math.random()*320}px;top:${10+Math.random()*80}px;color:#fff;opacity:0.5;font-size:${8+Math.random()*10}px;pointer-events:none`;
+      s.textContent = mapaId === "espacio" ? "·" : "❄";
+      s.style.cssText = `position:absolute;left:${3+Math.random()*94}%;top:${3+Math.random()*30}%;color:#fff;opacity:0.5;font-size:${8+Math.random()*10}px;pointer-events:none`;
       arena.appendChild(s);
     }
   }
@@ -4001,13 +4089,15 @@ MINIS.shooter.montar = (zona, cfg) => {
     requestAnimationFrame(bucleE);
   };
   requestAnimationFrame(bucleE);
+  const durShooter = (cfg && cfg.duracion) || 20;
+  const metaShooter = Math.max(10, Math.round(durShooter * 0.75));
   const tiempo = setTimeout(() => {
     if (gen !== MINI_GEN) return;
     fin = true;
     MINI_PUNTOS = puntos;
     if (cb) { cb(MINI_PUNTOS); return; }
-    miniTermino(puntos >= 15 ? `¡Defensa perfecta! ${mapa.icono} 🏆` : `¡Bien defendido! ${mapa.icono} ⭐`, puntos >= 15 ? 2 : 1);
-  }, 20000);
+    miniTermino(puntos >= metaShooter ? `¡Defensa perfecta! ${mapa.icono} 🏆` : `¡Bien defendido! ${mapa.icono} ⭐`, puntos >= metaShooter ? 2 : 1);
+  }, durShooter * 1000);
 };
 
 MINIS.salta.montar = (zona, cfg) => {
