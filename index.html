@@ -202,6 +202,7 @@
   .decor-mapa.flota { font-size: 1.2rem; animation: deriva 3s infinite; }
   .fondo-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   .enemigo.powerup { font-size: 1.9rem; filter: drop-shadow(0 0 8px #ffd54f); animation: pop 0.6s infinite; }
+  .power-pelea { position: absolute; font-size: 1.8rem; cursor: pointer; animation: pop 0.6s infinite; z-index: 6; filter: drop-shadow(0 0 6px #ffd54f); }
   .tienda-torre { margin-top: 12px; background: #232f4a; border-radius: 14px; padding: 10px 12px; }
   .tienda-fila { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #33415c; }
   .tienda-fila:last-child { border-bottom: none; }
@@ -3215,7 +3216,8 @@ function manejarDato(d) {
   } else if (d.t === "revancha") {
     if (ROL === "host") empezarCarrera();
   } else if (d.t === "shooter_start") {
-    empezarDueloShooter(d.mapa, d.duracion, true, d.modo || "duelo");
+    DUELO_MINI = d.mini || "shooter";
+    empezarDueloShooter(d.mapa, d.duracion, true, d.modo || "duelo", DUELO_MINI);
   } else if (d.t === "shooter_puntos") {
     PTS_RIVAL = d.n;
     pintarMarcador();
@@ -3230,7 +3232,13 @@ function manejarDato(d) {
 }
 
 function abrirDueloShooter(mapaId, modo = "duelo") {
+  return abrirDueloMini("shooter", mapaId, modo);
+}
+function abrirDueloMini(mini, mapaId, modo = "duelo") {
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
+  const infoMini = MINIS[mini] || MINIS.shooter;
+  const tit = mini === "shooter" ? `${mapa.icono} ${mapa.nombre}` : `${infoMini.icono} ${infoMini.nombre}`;
+  DUELO_MINI = mini;
   SHOOTER_DUELO_MAPA = mapaId;
   SHOOTER_MODO = modo;
   SHOOTER_RONDA = 1;
@@ -3240,19 +3248,19 @@ function abrirDueloShooter(mapaId, modo = "duelo") {
   if (!window.Peer) { mostrarFeedback("Sin conexión (revisa tu internet)", "mal"); return; }
   MI_NOMBRE = document.getElementById("multi-nombre")?.value.trim() || (typeof pac === "function" && pac()?.nombre) || "Jugador 1";
   ROL = "host";
-  const nombreModo = modo === "torneo" ? "🏆 ¡Torneo!" : modo === "coop" ? "🤝 ¡Cooperativo!" : `⚔️ ¡Duelo ${mapa.nombre}!`;
+  const nombreModo = modo === "torneo" ? "🏆 ¡Torneo!" : modo === "coop" ? "🤝 ¡Cooperativo!" : `⚔️ ¡Duelo ${mini === "shooter" ? mapa.nombre : infoMini.nombre}!`;
   document.getElementById("multi-crear").style.display = "none";
   document.getElementById("multi-sala").style.display = "flex";
-  document.getElementById("multi-estado").textContent = `${mapa.icono} ${mapa.nombre} - Creando sala...`;
+  document.getElementById("multi-estado").textContent = `${tit} - Creando sala...`;
   document.getElementById("btn-empezar").style.display = "none";
   document.getElementById("btn-empezar").textContent = nombreModo;
-  document.getElementById("btn-empezar").onclick = () => empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, SHOOTER_MODO);
+  document.getElementById("btn-empezar").onclick = () => empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, SHOOTER_MODO, DUELO_MINI);
   const code = generarCodigo();
   PEER = new Peer("neurojuego-" + code, { debug: 0 });
   PEER.on("open", () => {
-    document.getElementById("multi-estado").textContent = `${mapa.icono} ${mapa.nombre} ¡Sala lista!`;
+    document.getElementById("multi-estado").textContent = `${tit} ¡Sala lista!`;
     document.getElementById("multi-codigo-grande").textContent = code;
-    const url = "https://moizefalaa.github.io/Neuro-Juego/?sala=" + code + "&duelo=shooter&mapa=" + mapaId;
+    const url = "https://moizefalaa.github.io/Neuro-Juego/?sala=" + code + "&duelo=" + mini + (mini === "shooter" ? "&mapa=" + mapaId : "");
     const img = document.createElement("img");
     img.alt = "QR de la sala";
     img.style.cssText = "width:220px;height:220px";
@@ -3271,16 +3279,17 @@ function abrirDueloShooter(mapaId, modo = "duelo") {
     CONN.on("close", () => { if (ROL === "host") { document.getElementById("multi-rival").textContent = "Rival desconectado"; document.getElementById("btn-empezar").style.display = "none"; } });
   });
   PEER.on("error", (e) => {
-    if (e.type === "unavailable-id") { PEER.destroy(); PEER = null; setTimeout(() => abrirDueloShooter(mapaId, SHOOTER_MODO), 300); }
+    if (e.type === "unavailable-id") { PEER.destroy(); PEER = null; setTimeout(() => abrirDueloMini(mini, mapaId, SHOOTER_MODO), 300); }
     else mostrarFeedback("Error: " + e.type, "mal");
   });
 }
 
-function empezarDueloShooter(mapaId, duracion, esInvitado, modo) {
+function empezarDueloShooter(mapaId, duracion, esInvitado, modo, mini) {
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
   SHOOTER_DUELO_MAPA = mapaId;
   if (modo) SHOOTER_MODO = modo;
-  if (!esInvitado && CONN) CONN.send({ t: "shooter_start", mapa: mapaId, duracion, modo: SHOOTER_MODO });
+  if (mini) DUELO_MINI = mini;
+  if (!esInvitado && CONN) CONN.send({ t: "shooter_start", mini: DUELO_MINI, mapa: mapaId, duracion, modo: SHOOTER_MODO });
   SHOOTER_DUELO_GEN++;
   const miGen = SHOOTER_DUELO_GEN;
   CARRERA_GEN++; CARRERA_FIN = false;
@@ -3313,11 +3322,13 @@ function montarDueloShooter(mapaId, duracion, miGen) {
   const info = document.createElement("div");
   info.className = "duelo-shooter-info";
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
+  const infoMini = MINIS[DUELO_MINI] || MINIS.shooter;
+  const base = DUELO_MINI === "shooter" ? `${mapa.icono} ${mapa.nombre}` : `${infoMini.icono} ${infoMini.nombre}`;
   info.textContent = SHOOTER_MODO === "torneo"
-    ? `${mapa.icono} ${mapa.nombre} - 🏆 Ronda ${SHOOTER_RONDA} (${SHOOTER_WINS.mio}-${SHOOTER_WINS.rival})`
+    ? `${base} - 🏆 Ronda ${SHOOTER_RONDA} (${SHOOTER_WINS.mio}-${SHOOTER_WINS.rival})`
     : SHOOTER_MODO === "coop"
-    ? `${mapa.icono} ${mapa.nombre} - 🤝 ¡Juntos a ${SHOOTER_COOP_META} puntos!`
-    : `${mapa.icono} ${mapa.nombre} - ${duracion}s ¡Dispara sin parar!`;
+    ? `${base} - 🤝 ¡Juntos a ${MINI_COOP_META[DUELO_MINI] || 50} puntos!`
+    : `${base} - ${duracion}s ¡Sin parar!`;
   arena.appendChild(info);
   const zona = document.createElement("div");
   arena.appendChild(zona);
@@ -3330,8 +3341,8 @@ function montarDueloShooter(mapaId, duracion, miGen) {
     enviados.ultimo = Date.now();
     if (CONN) CONN.send({ t: "shooter_puntos", n: pts });
   };
-  MINIS.shooter.montar(zona, {
-    mapa: mapaId,
+  MINIS[DUELO_MINI].montar(zona, {
+    mapa: DUELO_MINI === "shooter" ? mapaId : undefined,
     duracion,
     cb: (pts) => {
       if (miGen !== SHOOTER_DUELO_GEN || dueloFin) return;
@@ -3367,14 +3378,17 @@ function terminarDueloShooter() {
     const caja = document.createElement("div");
     caja.className = "caja-resultado";
     const mapa = SHOOTER_MAPAS[SHOOTER_DUELO_MAPA] || SHOOTER_MAPAS.castillo;
+    const infoMini = MINIS[DUELO_MINI] || MINIS.shooter;
+    const base = DUELO_MINI === "shooter" ? `${mapa.icono} ${mapa.nombre}` : `${infoMini.icono} ${infoMini.nombre}`;
+    const metaCoop = MINI_COOP_META[DUELO_MINI] || 50;
     let html = "";
     if (SHOOTER_MODO === "coop") {
       const equipo = PTS_MIO + PTS_RIVAL;
-      const gano = equipo >= SHOOTER_COOP_META;
+      const gano = equipo >= metaCoop;
       html = `
       <div class="emoji-grande">${gano ? "🎉" : "💪"}</div>
       <h2>${gano ? "¡Meta cumplida juntos!" : "¡Casi lo logran!"}</h2>
-      <p style="color:#9fb4d8;font-size:1.05rem">${mapa.icono} ${mapa.nombre} - Equipo: ${equipo} / ${SHOOTER_COOP_META} (${MI_NOMBRE}: ${PTS_MIO} · ${RIVAL_NOMBRE}: ${PTS_RIVAL})</p>
+      <p style="color:#9fb4d8;font-size:1.05rem">${base} - Equipo: ${equipo} / ${metaCoop} (${MI_NOMBRE}: ${PTS_MIO} · ${RIVAL_NOMBRE}: ${PTS_RIVAL})</p>
       <div class="navegacion">
         <button class="btn" onclick="revanchaDueloShooter()">🔁 Otra vez</button>
         <button class="btn secundario" onclick="salirMulti()">🏠 Salir</button>
@@ -3387,7 +3401,7 @@ function terminarDueloShooter() {
       html = `
       <div class="emoji-grande">${campeon ? "🏆" : "⚔️"}</div>
       <h2>${campeon ? `¡${campeon} campeona del torneo!` : `Ronda ${SHOOTER_RONDA}: ${ganadorRonda ? "ganó " + ganadorRonda : "empate"}`}</h2>
-      <p style="color:#9fb4d8;font-size:1.05rem">${mapa.icono} ${mapa.nombre} - Serie: ${MI_NOMBRE} ${SHOOTER_WINS.mio} · ${SHOOTER_WINS.rival} ${RIVAL_NOMBRE} (ronda: ${MI_NOMBRE} ${PTS_MIO} · ${PTS_RIVAL} ${RIVAL_NOMBRE})</p>
+      <p style="color:#9fb4d8;font-size:1.05rem">${base} - Serie: ${MI_NOMBRE} ${SHOOTER_WINS.mio} · ${SHOOTER_WINS.rival} ${RIVAL_NOMBRE} (ronda: ${MI_NOMBRE} ${PTS_MIO} · ${PTS_RIVAL} ${RIVAL_NOMBRE})</p>
       <div class="navegacion">
         ${!campeon && ROL === "host" ? `<button class="btn" onclick="siguienteRondaTorneo()">➡ Siguiente ronda</button>` : ""}
         ${!campeon && ROL !== "host" ? `<p style="color:#9fb4d8">Esperando al anfitrión...</p>` : ""}
@@ -3402,7 +3416,7 @@ function terminarDueloShooter() {
       html = `
       <div class="emoji-grande">${emoji}</div>
       <h2>${titulo}</h2>
-      <p style="color:#9fb4d8;font-size:1.05rem">${mapa.icono} ${mapa.nombre} - ${MI_NOMBRE}: ${PTS_MIO} · ${RIVAL_NOMBRE}: ${PTS_RIVAL}</p>
+      <p style="color:#9fb4d8;font-size:1.05rem">${base} - ${MI_NOMBRE}: ${PTS_MIO} · ${RIVAL_NOMBRE}: ${PTS_RIVAL}</p>
       <div class="navegacion">
         <button class="btn" onclick="revanchaDueloShooter()">🔁 Revancha</button>
         <button class="btn secundario" onclick="salirMulti()">🏠 Salir</button>
@@ -3416,15 +3430,15 @@ function terminarDueloShooter() {
 function siguienteRondaTorneo() {
   if (ROL !== "host") return;
   SHOOTER_RONDA++;
-  if (CONN) CONN.send({ t: "shooter_start", mapa: SHOOTER_DUELO_MAPA, duracion: 40, modo: "torneo" });
-  empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, "torneo");
+  if (CONN) CONN.send({ t: "shooter_start", mini: DUELO_MINI, mapa: SHOOTER_DUELO_MAPA, duracion: 40, modo: "torneo" });
+  empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, "torneo", DUELO_MINI);
 }
 
 function revanchaDueloShooter() {
   SHOOTER_WINS = { mio: 0, rival: 0 }; SHOOTER_RONDA = 1;
   if (ROL === "host") {
     if (CONN) CONN.send({ t: "shooter_revancha" });
-    empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, SHOOTER_MODO);
+    empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, SHOOTER_MODO, DUELO_MINI);
   } else {
     if (CONN) CONN.send({ t: "shooter_revancha" });
   }
@@ -3820,13 +3834,17 @@ function palitoSVG(color, w) {
 MINIS.pelea.montar = (zona, cfg) => {
   const gen = MINI_GEN;
   const cb = cfg && cfg.cb;
-  let vidaJug = 3, vidaCPU = 3, bloqJug = false, cpuAtacando = false, fin = false;
+  const UP = miniUp("pelea");
+  const maxVida = 3 + Math.min(2, UP.blind || 0);
+  let vidaJug = maxVida, vidaCPU = 3, cpuMax = 3, bloqJug = false, cpuAtacando = false, fin = false;
   let fase = 0, distJug = 34, distCpu = 234, velJug = 0, velCpu = 0;
   let golpeJ = 0, tipoJ = null, bloqPoseJ = false, golpeC = 0, tipoC = null;
-  let tiempoRest = 30;
+  let tiempoRest = (cfg && cfg.duracion) || 30;
+  let rivalN = 1, puntosAcum = 0, jefeScale = 1, cpuDano = 1;
+  let dobleHastaP = 0, cpuLentoHasta = 0, escudoP = false;
   const nivel = Math.min(3, 1 + Math.floor(nivelDe("raz1") / 4));
   const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
-  document.getElementById("status-mini").textContent = "Nivel " + nivel;
+  document.getElementById("status-mini").textContent = "Nivel " + nivel + " · ¡Vence 5 rivales! 🥊";
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
   const vidJ = document.createElement("div");
@@ -3834,12 +3852,13 @@ MINIS.pelea.montar = (zona, cfg) => {
   vidJ.innerHTML = `Tú <span class="barra"><span class="relleno" style="width:100%"></span></span>`;
   const timer = document.createElement("div");
   timer.className = "mini-timer";
-  timer.textContent = "30";
+  timer.textContent = tiempoRest;
   const vidC = document.createElement("div");
   vidC.className = "mini-vida enemigo";
   vidC.innerHTML = `Rival <span class="barra"><span class="relleno" style="width:100%"></span></span>`;
   cab.append(vidJ, timer, vidC);
   zona.appendChild(cab);
+  if (!cb) zona.appendChild(filaDueloMini("pelea", zona, ".arena-pelea"));
   const arena = document.createElement("div");
   arena.className = "arena-pelea";
   const suelo = document.createElement("div");
@@ -3874,8 +3893,36 @@ MINIS.pelea.montar = (zona, cfg) => {
   const brazoDerC = cSVG.querySelector(".pb-brazo-der");
   const rot = (g, ang, px, py) => g.setAttribute("transform", `rotate(${ang} ${px} ${py})`);
   const pintarVida = () => {
-    vidJ.querySelector(".relleno").style.width = (vidaJug / 3 * 100) + "%";
-    vidC.querySelector(".relleno").style.width = (vidaCPU / 3 * 100) + "%";
+    vidJ.querySelector(".relleno").style.width = (vidaJug / maxVida * 100) + "%";
+    vidC.querySelector(".relleno").style.width = (vidaCPU / cpuMax * 100) + "%";
+  };
+  const nuevoRival = (n) => {
+    cpuMax = 3 + (n >= 3 ? 1 : 0) + (n >= 5 ? 1 : 0);
+    vidaCPU = cpuMax;
+    const jefe = n % 3 === 0;
+    jefeScale = jefe ? 1.28 : 1;
+    cpuDano = jefe ? 2 : 1;
+    distJug = 34; distCpu = 234; velJug = 0; velCpu = 0;
+    bloqJug = false; cpuAtacando = false;
+    pintarVida();
+    efecto(170, 40, jefe ? "⚠️ ¡JEFE!" : `¡Rival ${n}!`);
+    tono(jefe ? 220 : 440, 0.15, "square", 0.1);
+  };
+  const ganarRonda = () => {
+    const pts = vidaJug * 10 + 10;
+    puntosAcum += pts;
+    MINI_PUNTOS = puntosAcum;
+    if (rivalN >= 5) {
+      fin = true;
+      cancelAnimationFrame(raf);
+      clearInterval(reloj);
+      miniTermino("¡Campeón! Venciste 5 rivales 🏆", 2);
+      return;
+    }
+    rivalN++;
+    vidaJug = Math.min(maxVida, vidaJug + 1);
+    nuevoRival(rivalN);
+    pintarVida();
   };
   const efecto = (x, y, texto) => {
     const e = document.createElement("div");
@@ -3923,7 +3970,7 @@ MINIS.pelea.montar = (zona, cfg) => {
     jSVG.style.left = distJug + "px";
     jSVG.style.transform = `translateY(${sd * 2}px)`;
     cSVG.style.left = distCpu + "px";
-    cSVG.style.transform = `scaleX(-1) translateY(${-sd * 2}px)`;
+    cSVG.style.transform = `scaleX(-1) scale(${jefeScale}) translateY(${-sd * 2}px)`;
     raf = requestAnimationFrame(bucle);
   };
   raf = requestAnimationFrame(bucle);
@@ -3966,8 +4013,13 @@ MINIS.pelea.montar = (zona, cfg) => {
           tono(520, 0.1, "square", 0.1);
           vib(30);
           bloqJug = false;
+        } else if (escudoP) {
+          escudoP = false;
+          efecto(distJug + 26, 60, "🛡️");
+          tono(520, 0.12, "square", 0.1);
+          vib(30);
         } else {
-          vidaJug--;
+          vidaJug -= cpuDano;
           efecto(distJug + 18, 50, "💥");
           tono(150, 0.15, "sawtooth", 0.12);
           vib(80);
@@ -3978,9 +4030,9 @@ MINIS.pelea.montar = (zona, cfg) => {
           if (vidaJug <= 0) { terminar(false); return; }
         }
         cpuAtacando = false;
-        setTimeout(ataqueCPU, (1100 - nivel * 200) + Math.random() * 700);
+        setTimeout(ataqueCPU, ((1100 - nivel * 200) + Math.random() * 700) * (Date.now() < cpuLentoHasta ? 1.4 : 1));
       }, 300);
-    }, 700 - nivel * 120);
+    }, (700 - nivel * 120 + 80 * (UP.velo || 0)));
   };
 
   const golpeJugador = (danio, esPata) => {
@@ -3990,7 +4042,8 @@ MINIS.pelea.montar = (zona, cfg) => {
     velJug = 18;
     tono(esPata ? 220 : 330, 0.08, "square", 0.1);
     vib(40);
-    vidaCPU -= danio;
+    const d = (danio + ((UP.dano || 0) >= 2 ? 1 : 0)) * (Date.now() < dobleHastaP ? 2 : 1);
+    vidaCPU -= d;
     setTimeout(() => {
       if (gen !== MINI_GEN || fin) return;
       efecto(distCpu + 18, 50, "💥");
@@ -3998,7 +4051,7 @@ MINIS.pelea.montar = (zona, cfg) => {
       cSVG.classList.add("shock");
       setTimeout(() => cSVG.classList.remove("shock"), 250);
       pintarVida();
-      if (vidaCPU <= 0) terminar(true);
+      if (vidaCPU <= 0) { if (cb) terminar(true); else ganarRonda(); }
     }, 180);
   };
 
@@ -4020,6 +4073,26 @@ MINIS.pelea.montar = (zona, cfg) => {
   }, 1000);
 
   setTimeout(ataqueCPU, 1200);
+  const POWERS_P = ["🥊", "⚡", "❤️", "🛡️"];
+  const collectPowerP = (t) => {
+    if (t === "🥊") { dobleHastaP = Date.now() + 10000; efecto(170, 60, "¡Doble daño!"); }
+    else if (t === "⚡") { cpuLentoHasta = Date.now() + 10000; efecto(170, 60, "¡Rival lento!"); }
+    else if (t === "❤️") { vidaJug = Math.min(maxVida, vidaJug + 1); pintarVida(); efecto(170, 60, "+1 vida"); }
+    else if (t === "🛡️") { escudoP = true; efecto(170, 60, "¡Escudo!"); }
+    tono(660, 0.1); setTimeout(() => tono(990, 0.15), 100); vib(40);
+  };
+  const powerLoopP = setInterval(() => {
+    if (gen !== MINI_GEN) { clearInterval(powerLoopP); return; }
+    if (fin) return;
+    const it = document.createElement("div");
+    it.className = "power-pelea";
+    it.textContent = POWERS_P[Math.floor(Math.random() * POWERS_P.length)];
+    it.style.left = (40 + Math.random() * 220) + "px";
+    it.style.top = (30 + Math.random() * 60) + "px";
+    it.onclick = (ev) => { ev.stopPropagation(); if (gen === MINI_GEN && !fin) collectPowerP(it.textContent); it.remove(); };
+    arena.appendChild(it);
+    setTimeout(() => { if (it.isConnected) it.remove(); }, 4000);
+  }, 10000);
 };
 
 function shooterUp() { const p = pac(); p.shooterUp = p.shooterUp || { dano: 0, blind: 0, velo: 0 }; return p.shooterUp; }
@@ -4047,6 +4120,87 @@ let SHOOTER_MODO = "duelo";
 let SHOOTER_RONDA = 1;
 let SHOOTER_WINS = { mio: 0, rival: 0 };
 const SHOOTER_COOP_META = 50;
+let DUELO_MINI = "shooter";
+const MINI_COOP_META = { shooter: 50, pelea: 60, salta: 40 };
+function miniUp(mini) { const p = pac(); const k = mini + "Up"; p[k] = p[k] || { dano: 0, blind: 0, velo: 0 }; return p[k]; }
+const MINI_TIENDAS = {
+  pelea: [
+    { id: "dano", nombre: "Puños", icono: "🥊", desc: "Pegas doble al nivel 2", costos: [15, 30, 50] },
+    { id: "blind", nombre: "Vida", icono: "❤️", desc: "+1 vida por nivel", costos: [15, 30, 50] },
+    { id: "velo", nombre: "Pies", icono: "👟", desc: "El rival avisa más lento", costos: [10, 25, 40] }
+  ],
+  salta: [
+    { id: "dano", nombre: "Estrella", icono: "⭐", desc: "Doble puntos al nivel 2", costos: [15, 30, 50] },
+    { id: "blind", nombre: "Vida", icono: "❤️", desc: "+1 vida por nivel", costos: [15, 30, 50] },
+    { id: "velo", nombre: "Salto", icono: "👟", desc: "Saltas más alto", costos: [10, 25, 40] }
+  ]
+};
+function comprarMejoraMini(mini, id) {
+  const up = miniUp(mini);
+  const item = MINI_TIENDAS[mini].find(t => t.id === id);
+  if (!item || up[id] >= 3) return;
+  const costo = item.costos[up[id]];
+  if (estrellasDisponibles() < costo) { mostrarFeedback("Te faltan ⭐ (cuesta " + costo + ")", "mal"); return; }
+  pac().gastoEstrellas = (pac().gastoEstrellas || 0) + costo;
+  up[id]++;
+  guardar();
+  tono(660, 0.1); setTimeout(() => tono(880, 0.15), 100);
+  mostrarFeedback(`${item.icono} ${item.nombre} nivel ${up[id]}`, "ok");
+  const zona = document.getElementById("zona-mini");
+  if (zona) { zona.innerHTML = ""; MINIS[mini].montar(zona, {}); }
+}
+function tiendaMiniHTML(mini) {
+  const box = document.createElement("div");
+  box.className = "tienda-torre";
+  const up = miniUp(mini);
+  const disp = estrellasDisponibles();
+  const t = document.createElement("div");
+  t.style.cssText = "text-align:center;font-weight:800;color:#eef2f7;margin-bottom:4px";
+  t.textContent = `🔧 Mejoras (${disp} ⭐)`;
+  box.appendChild(t);
+  MINI_TIENDAS[mini].forEach(item => {
+    const niv = up[item.id] || 0;
+    const fila = document.createElement("div");
+    fila.className = "tienda-fila";
+    const izq = document.createElement("div");
+    izq.style.cssText = "color:#eef2f7;font-size:0.9rem";
+    izq.innerHTML = `${item.icono} <b>${item.nombre}</b> ${"●".repeat(niv)}${"○".repeat(3 - niv)}<br><span style="color:#9fb4d8;font-size:0.8rem">${item.desc}</span>`;
+    fila.appendChild(izq);
+    const btn = document.createElement("button");
+    btn.className = "btn-comprar";
+    if (niv >= 3) { btn.textContent = "MAX"; btn.disabled = true; }
+    else { btn.textContent = `⭐ ${item.costos[niv]}`; btn.disabled = disp < item.costos[niv]; btn.onclick = () => comprarMejoraMini(mini, item.id); }
+    fila.appendChild(btn);
+    box.appendChild(fila);
+  });
+  return box;
+}
+function filaDueloMini(mini, zona, arenaSel) {
+  const fila = document.createElement("div");
+  fila.style.cssText = "display:flex;gap:6px;justify-content:center;margin:6px 0;flex-wrap:wrap";
+  [["⚔️ Duelo", "duelo"], ["🏆 Torneo", "torneo"], ["🤝 Coop", "coop"]].forEach(([txt, modo]) => {
+    const b = document.createElement("button");
+    b.textContent = txt;
+    b.style.cssText = "border:2px solid #4a5a80;background:#374771;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:700;font-size:0.9rem";
+    b.onclick = () => abrirDueloMini(mini, null, modo);
+    fila.appendChild(b);
+  });
+  const t = document.createElement("button");
+  t.textContent = "🔧";
+  t.title = "Mejoras";
+  t.style.cssText = "border:2px solid #4a5a80;background:#2c3a57;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:0.9rem";
+  t.onclick = () => {
+    const s = zona.querySelector(".tienda-torre");
+    if (s) s.remove();
+    else {
+      const ref = arenaSel ? zona.querySelector(arenaSel) : null;
+      if (ref) zona.insertBefore(tiendaMiniHTML(mini), ref);
+      else zona.appendChild(tiendaMiniHTML(mini));
+    }
+  };
+  fila.appendChild(t);
+  return fila;
+}
 
 MINIS.shooter.montar = (zona, cfg) => {
   const gen = MINI_GEN;
@@ -4422,14 +4576,21 @@ MINIS.shooter.montar = (zona, cfg) => {
 MINIS.salta.montar = (zona, cfg) => {
   const gen = MINI_GEN;
   const cb = cfg && cfg.cb;
-  let puntaje = 0, vidas = 3, fin = false;
+  const UP = miniUp("salta");
+  const maxVida = 3 + Math.min(2, UP.blind || 0);
+  let puntaje = 0, vidas = maxVida, fin = false;
   let y = 0, vy = 0, enAire = false, contaPolvo = 0;
+  const multPts = (UP.dano || 0) >= 2 ? 2 : 1;
+  const vySalto = 9 + 0.5 * (UP.velo || 0);
+  const durSalta = (cfg && cfg.duracion) || 20;
+  let x2HastaS = 0, escudoS = false, slowS = 0, oleadaNS = 0, muroSpawn = false;
   const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
   document.getElementById("status-mini").textContent = "Salta los de abajo, quédate con los de arriba ⬆";
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
   cab.innerHTML = `<div class="mini-vida">Vidas <span class="barra"><span class="relleno" style="width:100%"></span></span></div><div class="mini-vida" id="mini-salta-pts">Puntos: 0</div>`;
   zona.appendChild(cab);
+  if (!cb) zona.appendChild(filaDueloMini("salta", zona, ".arena-salta"));
   const arena = document.createElement("div");
   arena.className = "arena-salta";
   const nubes = [];
@@ -4481,19 +4642,27 @@ MINIS.salta.montar = (zona, cfg) => {
     arena.appendChild(p);
     setTimeout(() => p.remove(), 500);
   };
-  const popup = () => {
+  const popup = (txt) => {
     const e = document.createElement("div");
-    e.className = "popup-punto"; e.textContent = "+1";
+    e.className = "popup-punto"; e.textContent = txt || "+1";
     e.style.left = "44px"; e.style.top = "70px";
     arena.appendChild(e);
     setTimeout(() => e.remove(), 700);
+  };
+  const avisoS = (txt) => {
+    const a = document.createElement("div");
+    a.className = "aviso-cpu";
+    a.textContent = txt;
+    a.style.left = "50%"; a.style.transform = "translateX(-50%)"; a.style.top = "40px";
+    arena.appendChild(a);
+    setTimeout(() => a.remove(), 1600);
   };
   const obstaculos = [];
   let fase = 0, vel = 4;
   const saltar = () => {
     if (fin || enAire) return;
     enAire = true;
-    vy = 9;
+    vy = vySalto;
     tono(520, 0.08, "sine", 0.08);
     vib(15);
   };
@@ -4512,10 +4681,54 @@ MINIS.salta.montar = (zona, cfg) => {
     if (gen !== MINI_GEN) { clearInterval(spawnLoop); return; }
     spawn();
   }, 560);
+  const spawnMuro = () => {
+    if (fin || gen !== MINI_GEN) return;
+    const ob = document.createElement("div");
+    ob.className = "obstaculo";
+    ob.textContent = "🧱";
+    ob.style.fontSize = "2.6rem";
+    ob.style.left = (arena.clientWidth + 10) + "px";
+    arena.appendChild(ob);
+    obstaculos.push({ el: ob, aereo: false, muro: true, x: arena.clientWidth, resuelto: false });
+  };
+  const spawnPowerS = () => {
+    if (fin || gen !== MINI_GEN) return;
+    const tipos = ["⭐", "🛡️", "❤️", "🐌"];
+    const tipo = tipos[Math.floor(Math.random() * tipos.length)];
+    const ob = document.createElement("div");
+    ob.className = "obstaculo";
+    ob.textContent = tipo;
+    ob.style.fontSize = "1.5rem";
+    const py = 55 + Math.random() * 55;
+    ob.style.bottom = (22 + py) + "px";
+    ob.style.left = (arena.clientWidth + 10) + "px";
+    arena.appendChild(ob);
+    obstaculos.push({ el: ob, power: tipo, py, x: arena.clientWidth, resuelto: true });
+  };
+  const collectPowerS = (tipo) => {
+    if (tipo === "⭐") { x2HastaS = Date.now() + 8000; popup("¡x2!"); }
+    else if (tipo === "🛡️") { escudoS = true; popup("¡Escudo!"); }
+    else if (tipo === "❤️") { vidas = Math.min(maxVida, vidas + 1); rellenoVida.style.width = (vidas / maxVida * 100) + "%"; popup("+1 ❤️"); }
+    else if (tipo === "🐌") { slowS = Date.now() + 6000; popup("¡Lento!"); }
+    tono(660, 0.1); setTimeout(() => tono(990, 0.15), 100); vib(40);
+  };
+  const powerLoopS = setInterval(() => {
+    if (gen !== MINI_GEN) { clearInterval(powerLoopS); return; }
+    if (!fin && Math.random() < 0.7) spawnPowerS();
+  }, 9000);
+  const oleadaLoopS = setInterval(() => {
+    if (gen !== MINI_GEN) { clearInterval(oleadaLoopS); return; }
+    if (fin) return;
+    oleadaNS++;
+    avisoS(`¡Oleada ${oleadaNS}!`);
+    tono(440, 0.12, "square", 0.1);
+    for (let i = 0; i < 3; i++) setTimeout(() => spawn(), i * 300);
+  }, 14000);
   const bucle = () => {
     if (gen !== MINI_GEN || fin) return;
     fase += 0.3;
     vel = Math.min(10, 4 + puntaje * 0.2);
+    if (Date.now() < slowS) vel *= 0.6;
     const swing = Math.sin(fase) * 32;
     const run = enAire ? 0 : swing;
     rot(piernaI, run, 45, 70);
@@ -4545,17 +4758,31 @@ MINIS.salta.montar = (zona, cfg) => {
       const ob = obstaculos[i];
       ob.x -= vel;
       ob.el.style.left = ob.x + "px";
-      if (!ob.resuelto && ob.x < 72 && ob.x > 8) {
+      if (ob.power) {
+        if (ob.x > 20 && ob.x < 84 && Math.abs(ob.py - y) < 48) {
+          collectPowerS(ob.power);
+          ob.el.remove(); obstaculos.splice(i, 1);
+        } else if (ob.x < -34) { ob.el.remove(); obstaculos.splice(i, 1); }
+        continue;
+      }
+      const dentro = ob.muro ? (ob.x < 90 && ob.x > -10) : (ob.x < 72 && ob.x > 8);
+      if (!ob.resuelto && dentro) {
         const choca = ob.aereo ? (y > 50) : (y < 22);
         if (choca) {
           ob.resuelto = true;
           ob.el.remove();
           obstaculos.splice(i, 1);
-          vidas--;
-          rellenoVida.style.width = (vidas / 3 * 100) + "%";
-          tono(180, 0.2, "triangle", 0.12);
-          vib(70);
-          sacudirArena();
+          if (escudoS) {
+            escudoS = false;
+            popup("¡Escudo!");
+            tono(520, 0.12, "square", 0.1);
+          } else {
+            vidas--;
+            rellenoVida.style.width = (vidas / maxVida * 100) + "%";
+            tono(180, 0.2, "triangle", 0.12);
+            vib(70);
+            sacudirArena();
+          }
           if (vidas <= 0) { fin = true; MINI_PUNTOS = puntaje; if (cb) { cb(MINI_PUNTOS); return; } miniTermino("¡Choque! 💥", 0); return; }
           continue;
         }
@@ -4564,10 +4791,17 @@ MINIS.salta.montar = (zona, cfg) => {
         ob.el.remove();
         obstaculos.splice(i, 1);
         if (!ob.resuelto) {
-          puntaje++;
-          popup();
+          const pts = (ob.muro ? 5 : 1) * multPts * (Date.now() < x2HastaS ? 2 : 1);
+          puntaje += pts;
+          popup("+" + pts);
           document.getElementById("mini-salta-pts").textContent = "Puntos: " + puntaje;
           tono(620, 0.06);
+          if (!muroSpawn && puntaje >= 15) {
+            muroSpawn = true;
+            avisoS("⚠️ ¡MURO!");
+            tono(220, 0.25, "sawtooth", 0.14);
+            spawnMuro();
+          }
         }
       }
     }
@@ -4580,7 +4814,7 @@ MINIS.salta.montar = (zona, cfg) => {
     MINI_PUNTOS = puntaje;
     if (cb) { cb(MINI_PUNTOS); return; }
     miniTermino(puntaje >= 20 ? "¡Imparable! 🏆" : "¡Gran carrera! ⭐", puntaje >= 20 ? 2 : 1);
-  }, 20000);
+  }, durSalta * 1000);
 };
 
 construirMenu();
