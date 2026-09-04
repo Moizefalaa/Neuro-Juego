@@ -194,9 +194,12 @@
   .boton-pelea.patada { background: #1565c0; }
   .boton-pelea.bloqueo { background: #2e7d32; }
 
-  .arena-shooter { position: relative; width: min(560px, 94vw); height: 360px; margin: 0 auto; background: linear-gradient(#1a2332, #2c3a57); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; touch-action: none; }
-  .zona-mini, #zona-mini { width: 100%; max-width: 600px; margin: 0 auto; }
-  .torre { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); }
+  .arena-shooter { position: relative; width: min(680px, 96vw); height: 440px; margin: 0 auto; background: linear-gradient(#1a2332, #2c3a57); border-radius: 18px; overflow: hidden; border: 2px solid #4a5a80; touch-action: none; }
+  .zona-mini, #zona-mini { width: 100%; max-width: 720px; margin: 0 auto; }
+  .torre { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); will-change: left; }
+  @keyframes deriva { 50% { transform: translateY(-7px); } }
+  .decor-mapa.suelo { font-size: 1.5rem; }
+  .decor-mapa.flota { font-size: 1.2rem; animation: deriva 3s infinite; }
   .proyectil { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #ffd54f; box-shadow: 0 0 8px #ffb300; pointer-events: none; }
   .enemigo { position: absolute; font-size: 1.7rem; cursor: pointer; pointer-events: auto; }
   .explosion { position: absolute; font-size: 1.6rem; pointer-events: none; animation: boom 0.4s forwards; }
@@ -3646,15 +3649,28 @@ function miniTermino(mensaje, recompensa) {
 }
 
 const SHOOTER_MAPAS = {
-  castillo: { nombre: "Castillo", icono: "🏰", fondo: "linear-gradient(#1a2332, #2c3a57)", color: "#ffb300", enemigos: ["👾","🤖","👿"], tanque: "👹", deco: "🧱" },
-  bosque:   { nombre: "Bosque",   icono: "🌲", fondo: "linear-gradient(#0d2818, #1e4d2b)", color: "#8bc34a", enemigos: ["🐺","🦇","🕷️"], tanque: "🐻", deco: "🌳" },
-  desierto: { nombre: "Desierto", icono: "🏜️", fondo: "linear-gradient(#3a2505, #7a5a10)", color: "#ff8f00", enemigos: ["🦂","🐍","🦀"], tanque: "🦁", deco: "🌵" },
-  espacio:  { nombre: "Espacio",  icono: "🚀", fondo: "linear-gradient(#0a0a1a, #1a1040)", color: "#64b5f6", enemigos: ["👽","🛰️","☄️"], tanque: "🛸", deco: "⭐" },
-  oceano:   { nombre: "Océano",   icono: "🌊", fondo: "linear-gradient(#013a5b, #0190b0)", color: "#4dd0e1", enemigos: ["🐙","🦈","🐠"], tanque: "🐳", deco: "🐚" },
-  ciudad:   { nombre: "Ciudad",   icono: "🌃", fondo: "linear-gradient(#141428, #3c2a5e)", color: "#ba68c8", enemigos: ["🚗","🚁","🤖"], tanque: "🦹", deco: "🏢" },
-  volcan:   { nombre: "Volcán",   icono: "🌋", fondo: "linear-gradient(#2b0a0a, #7a2a00)", color: "#ff7043", enemigos: ["🦎","🦂","🔥"], tanque: "🐉", deco: "🪨" },
-  invierno: { nombre: "Invierno", icono: "❄️", fondo: "linear-gradient(#1c2f4a, #7fa8c9)", color: "#b3e5fc", enemigos: ["🐧","⛄","🦉"], tanque: "🐻‍❄️", deco: "🎄" }
+  castillo: { nombre: "Castillo", icono: "🏰", fondo: "linear-gradient(#1a2332, #2c3a57)", color: "#ffb300", enemigos: ["👾","🤖","👿"], tanque: "👹", deco: "🧱", arma: { nombre: "Cañón", icono: "💣", tipo: "canon" }, bala: "#ffd54f", velBala: 12, balaTam: 10, decos: ["🧱","🚩","⛓️","🛡️"], flota: "🦇" },
+  bosque:   { nombre: "Bosque",   icono: "🌲", fondo: "linear-gradient(#0d2818, #1e4d2b)", color: "#8bc34a", enemigos: ["🐺","🦇","🕷️"], tanque: "🐻", deco: "🌳", arma: { nombre: "Arco", icono: "🏹", tipo: "arco" }, bala: "#c0ca33", velBala: 11, balaTam: 9, decos: ["🌳","🍄","🌲","🌼"], flota: "🦋" },
+  desierto: { nombre: "Desierto", icono: "🏜️", fondo: "linear-gradient(#3a2505, #7a5a10)", color: "#ff8f00", enemigos: ["🦂","🐍","🦀"], tanque: "🦁", deco: "🌵", arma: { nombre: "Honda", icono: "🪨", tipo: "honda" }, bala: "#ffab40", velBala: 11, balaTam: 11, decos: ["🌵","🦴","🏜️","🪨"], flota: "🦅" },
+  espacio:  { nombre: "Espacio",  icono: "🚀", fondo: "linear-gradient(#0a0a1a, #1a1040)", color: "#64b5f6", enemigos: ["👽","🛰️","☄️"], tanque: "🛸", deco: "⭐", arma: { nombre: "Láser", icono: "🔫", tipo: "laser" }, bala: "#40c4ff", velBala: 14, balaTam: 9, decos: ["🪐","🌙","💫","👾"], flota: "☄️" },
+  oceano:   { nombre: "Océano",   icono: "🌊", fondo: "linear-gradient(#013a5b, #0190b0)", color: "#4dd0e1", enemigos: ["🐙","🦈","🐠"], tanque: "🐳", deco: "🐚", arma: { nombre: "Arpón", icono: "🎣", tipo: "arpon" }, bala: "#18ffff", velBala: 13, balaTam: 9, decos: ["🐚","🪸","⚓","🦀"], flota: "⛵" },
+  ciudad:   { nombre: "Ciudad",   icono: "🌃", fondo: "linear-gradient(#141428, #3c2a5e)", color: "#ba68c8", enemigos: ["🚗","🚁","🤖"], tanque: "🦹", deco: "🏢", arma: { nombre: "Bláster", icono: "⚡", tipo: "blaster" }, bala: "#e040fb", velBala: 13, balaTam: 10, decos: ["🏢","🚦","🌃","🚕"], flota: "🎈" },
+  volcan:   { nombre: "Volcán",   icono: "🌋", fondo: "linear-gradient(#2b0a0a, #7a2a00)", color: "#ff7043", enemigos: ["🦎","🦂","🔥"], tanque: "🐉", deco: "🪨", arma: { nombre: "Lanzallamas", icono: "🔥", tipo: "llama" }, bala: "#ff3d00", velBala: 9, balaTam: 14, decos: ["🪨","🔥","💨","🌋"], flota: "🔥" },
+  invierno: { nombre: "Invierno", icono: "❄️", fondo: "linear-gradient(#1c2f4a, #7fa8c9)", color: "#b3e5fc", enemigos: ["🐧","⛄","🦉"], tanque: "🐻‍❄️", deco: "🎄", arma: { nombre: "Bolas de nieve", icono: "🔮", tipo: "nieve" }, bala: "#ffffff", velBala: 10, balaTam: 12, decos: ["🎄","⛄","❄️","🧣"], flota: "❄️" }
 };
+
+function armaCanyon(tipo, col) {
+  switch (tipo) {
+    case "arco": return `<path d="M50,40 Q78,18 90,40 Q78,62 50,40" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round"/><line x1="50" y1="40" x2="90" y2="40" stroke="#fff" stroke-width="2"/>`;
+    case "laser": return `<line x1="50" y1="36" x2="90" y2="36" stroke="${col}" stroke-width="5" stroke-linecap="round"/><line x1="50" y1="44" x2="90" y2="44" stroke="${col}" stroke-width="5" stroke-linecap="round" opacity="0.7"/><circle cx="50" cy="40" r="7" fill="${col}"/>`;
+    case "arpon": return `<line x1="50" y1="40" x2="84" y2="40" stroke="${col}" stroke-width="6" stroke-linecap="round"/><polygon points="84,33 96,40 84,47" fill="#fff"/>`;
+    case "llama": return `<polygon points="50,32 88,24 88,56 50,48" fill="${col}" opacity="0.9"/><circle cx="50" cy="40" r="8" fill="${col}"/>`;
+    case "nieve": return `<line x1="50" y1="40" x2="76" y2="40" stroke="${col}" stroke-width="8" stroke-linecap="round"/><circle cx="82" cy="40" r="9" fill="#fff" stroke="#9fb4d8" stroke-width="2"/>`;
+    case "honda": return `<line x1="50" y1="40" x2="70" y2="28" stroke="${col}" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="40" x2="70" y2="52" stroke="${col}" stroke-width="6" stroke-linecap="round"/><line x1="70" y1="28" x2="70" y2="52" stroke="#fff" stroke-width="2"/>`;
+    case "blaster": return `<rect x="50" y="33" width="30" height="14" rx="7" fill="${col}"/><circle cx="84" cy="40" r="6" fill="#fff"/><circle cx="58" cy="40" r="4" fill="#fff" opacity="0.7"/>`;
+    default: return `<line x1="50" y1="40" x2="88" y2="40" stroke="${col}" stroke-width="10" stroke-linecap="round"/><circle cx="88" cy="40" r="7" fill="#333"/>`;
+  }
+}
 let SHOOTER_MAPA_ACTUAL = "castillo";
 let SHOOTER_DUELO_GEN = 0;
 
@@ -3917,7 +3933,7 @@ MINIS.shooter.montar = (zona, cfg) => {
   SHOOTER_MAPA_ACTUAL = mapaId;
   let vidas = 3, puntos = 0, fin = false;
   const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
-  document.getElementById("status-mini").textContent = `${mapa.icono} ${mapa.nombre} - Toca y dispara 👆`;
+  document.getElementById("status-mini").textContent = `${mapa.icono} ${mapa.nombre} · ${mapa.arma.icono} ${mapa.arma.nombre} - Toca para moverte y disparar 👆`;
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
   cab.innerHTML = `<div class="mini-vida">Vidas <span class="barra"><span class="relleno" style="width:100%"></span></span></div><div class="mini-vida" id="mini-shooter-pts">Puntos: 0</div>`;
@@ -3950,20 +3966,27 @@ MINIS.shooter.montar = (zona, cfg) => {
   torre.innerHTML = `<svg width="64" height="70" viewBox="0 0 100 110">
     <line x1="50" y1="28" x2="50" y2="72" stroke="${col}" stroke-width="11" stroke-linecap="round"/>
     <circle cx="50" cy="16" r="12" fill="${col}"/>
-    <g class="canon"><line x1="50" y1="40" x2="88" y2="40" stroke="#ffd54f" stroke-width="9" stroke-linecap="round"/></g>
+    <g class="canon">${armaCanyon(mapa.arma.tipo, col)}</g>
     <g class="pb-pierna-izq"><line x1="45" y1="70" x2="32" y2="106" stroke="${col}" stroke-width="9" stroke-linecap="round"/></g>
     <g class="pb-pierna-der"><line x1="55" y1="70" x2="68" y2="106" stroke="${col}" stroke-width="9" stroke-linecap="round"/></g>
   </svg>`;
   arena.appendChild(torre);
-  for (let i = 0; i < 2; i++) {
+  const posSuelo = ["5%", "30%", "58%", "83%"];
+  (mapa.decos || [mapa.deco]).slice(0, 4).forEach((emoji, i) => {
     const d = document.createElement("div");
-    d.className = "decor-mapa";
-    d.textContent = mapa.deco;
-    d.style.fontSize = "1.1rem";
-    d.style.bottom = "28px";
-    d.style.left = (i === 0 ? "8px" : "auto");
-    d.style.right = (i === 1 ? "8px" : "auto");
+    d.className = "decor-mapa suelo";
+    d.textContent = emoji;
+    d.style.bottom = "26px";
+    d.style.left = posSuelo[i] || "50%";
     arena.appendChild(d);
+  });
+  if (mapa.flota) {
+    const f = document.createElement("div");
+    f.className = "decor-mapa flota";
+    f.textContent = mapa.flota;
+    f.style.top = "8%";
+    f.style.left = "70%";
+    arena.appendChild(f);
   }
   if (mapaId === "espacio" || mapaId === "invierno") {
     for (let i = 0; i < 8; i++) {
@@ -3998,7 +4021,7 @@ MINIS.shooter.montar = (zona, cfg) => {
     const en = document.createElement("div");
     en.className = "enemigo" + (tanque ? " tanque" : "");
     en.textContent = tanque ? mapa.tanque : mapa.enemigos[Math.floor(Math.random() * mapa.enemigos.length)];
-    const x0 = 20 + Math.random() * (arena.clientWidth - 60);
+    const x0 = 20 + Math.random() * (Math.max(arena.clientWidth, 320) - 60);
     en.style.left = x0 + "px";
     en.style.top = "-40px";
     arena.appendChild(en);
@@ -4008,9 +4031,11 @@ MINIS.shooter.montar = (zona, cfg) => {
     if (gen !== MINI_GEN) { clearInterval(spawnLoop); return; }
     spawn();
   }, 420);
+  let torreX = null, objetivoX = null;
   const disparar = (ex, ey) => {
     if (fin || gen !== MINI_GEN) return;
-    const tx = arena.clientWidth / 2, ty = arena.clientHeight - 62;
+    if (torreX == null) torreX = arena.clientWidth / 2;
+    const tx = torreX, ty = arena.clientHeight - 62;
     const dx = ex - tx, dy = ey - ty;
     const ang = Math.atan2(dy, dx) * 180 / Math.PI;
     canon.setAttribute("transform", `rotate(${ang} 50 40)`);
@@ -4019,19 +4044,24 @@ MINIS.shooter.montar = (zona, cfg) => {
     fog.style.left = (tx - 8) + "px"; fog.style.top = (ty - 8) + "px";
     arena.appendChild(fog);
     setTimeout(() => fog.remove(), 200);
+    const tamBala = mapa.balaTam || 10;
     const p = document.createElement("div");
     p.className = "proyectil";
-    p.style.left = (tx - 5) + "px"; p.style.top = (ty - 5) + "px";
+    p.style.width = tamBala + "px"; p.style.height = tamBala + "px";
+    p.style.background = mapa.bala || "#ffd54f";
+    p.style.boxShadow = `0 0 8px ${mapa.bala || "#ffd54f"}`;
+    p.style.left = (tx - tamBala / 2) + "px"; p.style.top = (ty - tamBala / 2) + "px";
     arena.appendChild(p);
     tono(900, 0.06);
     vib(15);
     const dist = Math.hypot(dx, dy) || 1;
-    const vx = dx / dist * 12, vy = dy / dist * 12;
+    const velBala = mapa.velBala || 12;
+    const vx = dx / dist * velBala, vy = dy / dist * velBala;
     let x = tx, y = ty;
     const rafP = () => {
       if (gen !== MINI_GEN) { p.remove(); return; }
       x += vx; y += vy;
-      p.style.left = (x - 5) + "px"; p.style.top = (y - 5) + "px";
+      p.style.left = (x - tamBala / 2) + "px"; p.style.top = (y - tamBala / 2) + "px";
       let hit = false;
       for (let i = 0; i < enemigos.length; i++) {
         const en = enemigos[i];
@@ -4064,10 +4094,17 @@ MINIS.shooter.montar = (zona, cfg) => {
   };
   arena.addEventListener("pointerdown", (ev) => {
     const r = arena.getBoundingClientRect();
-    disparar(ev.clientX - r.left, ev.clientY - r.top);
+    const lx = ev.clientX - r.left, ly = ev.clientY - r.top;
+    objetivoX = Math.max(32, Math.min(Math.max(arena.clientWidth, 320) - 32, lx));
+    disparar(lx, ly);
   });
   const bucleE = () => {
     if (gen !== MINI_GEN || fin) return;
+    if (torreX == null) { torreX = Math.max(arena.clientWidth, 320) / 2; objetivoX = torreX; }
+    if (objetivoX != null && Math.abs(objetivoX - torreX) > 1) {
+      torreX += (objetivoX - torreX) * 0.18;
+      torre.style.left = torreX + "px";
+    }
     for (const en of enemigos) {
       en.y += en.vel;
       en.fase += 0.08;
