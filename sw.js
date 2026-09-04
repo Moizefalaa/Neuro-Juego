@@ -1,4 +1,4 @@
-const CACHE = "neurojuego-v9";
+const CACHE = "neurojuego-v10";
 
 self.addEventListener("message", (e) => {
   if (e.data && e.data.tipo === "SKIP_WAITING") self.skipWaiting();
