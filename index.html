@@ -201,6 +201,12 @@
   .decor-mapa.suelo { font-size: 1.5rem; }
   .decor-mapa.flota { font-size: 1.2rem; animation: deriva 3s infinite; }
   .fondo-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .enemigo.powerup { font-size: 1.9rem; filter: drop-shadow(0 0 8px #ffd54f); animation: pop 0.6s infinite; }
+  .tienda-torre { margin-top: 12px; background: #232f4a; border-radius: 14px; padding: 10px 12px; }
+  .tienda-fila { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #33415c; }
+  .tienda-fila:last-child { border-bottom: none; }
+  .btn-comprar { border: none; border-radius: 10px; padding: 8px 12px; font-weight: 800; cursor: pointer; background: #ffb300; color: #25210c; }
+  .btn-comprar:disabled { background: #4a5a80; color: #9fb4d8; cursor: default; }
   .proyectil { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #ffd54f; box-shadow: 0 0 8px #ffb300; pointer-events: none; }
   .enemigo { position: absolute; font-size: 1.7rem; cursor: pointer; pointer-events: auto; }
   .explosion { position: absolute; font-size: 1.6rem; pointer-events: none; animation: boom 0.4s forwards; }
@@ -3209,7 +3215,7 @@ function manejarDato(d) {
   } else if (d.t === "revancha") {
     if (ROL === "host") empezarCarrera();
   } else if (d.t === "shooter_start") {
-    empezarDueloShooter(d.mapa, d.duracion, true);
+    empezarDueloShooter(d.mapa, d.duracion, true, d.modo || "duelo");
   } else if (d.t === "shooter_puntos") {
     PTS_RIVAL = d.n;
     pintarMarcador();
@@ -3218,24 +3224,29 @@ function manejarDato(d) {
     pintarMarcador();
     terminarDueloShooter();
   } else if (d.t === "shooter_revancha") {
-    if (ROL === "host") empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false);
+    SHOOTER_WINS = { mio: 0, rival: 0 }; SHOOTER_RONDA = 1;
+    if (ROL === "host") empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, SHOOTER_MODO);
   }
 }
 
-function abrirDueloShooter(mapaId) {
+function abrirDueloShooter(mapaId, modo = "duelo") {
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
   SHOOTER_DUELO_MAPA = mapaId;
+  SHOOTER_MODO = modo;
+  SHOOTER_RONDA = 1;
+  SHOOTER_WINS = { mio: 0, rival: 0 };
   SHOOTER_DUELO_GEN++;
   mostrarPantalla("scr-multi");
   if (!window.Peer) { mostrarFeedback("Sin conexión (revisa tu internet)", "mal"); return; }
   MI_NOMBRE = document.getElementById("multi-nombre")?.value.trim() || (typeof pac === "function" && pac()?.nombre) || "Jugador 1";
   ROL = "host";
+  const nombreModo = modo === "torneo" ? "🏆 ¡Torneo!" : modo === "coop" ? "🤝 ¡Cooperativo!" : `⚔️ ¡Duelo ${mapa.nombre}!`;
   document.getElementById("multi-crear").style.display = "none";
   document.getElementById("multi-sala").style.display = "flex";
   document.getElementById("multi-estado").textContent = `${mapa.icono} ${mapa.nombre} - Creando sala...`;
   document.getElementById("btn-empezar").style.display = "none";
-  document.getElementById("btn-empezar").textContent = `⚔️ ¡Duelo ${mapa.nombre}!`;
-  document.getElementById("btn-empezar").onclick = () => empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false);
+  document.getElementById("btn-empezar").textContent = nombreModo;
+  document.getElementById("btn-empezar").onclick = () => empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, SHOOTER_MODO);
   const code = generarCodigo();
   PEER = new Peer("neurojuego-" + code, { debug: 0 });
   PEER.on("open", () => {
@@ -3260,15 +3271,16 @@ function abrirDueloShooter(mapaId) {
     CONN.on("close", () => { if (ROL === "host") { document.getElementById("multi-rival").textContent = "Rival desconectado"; document.getElementById("btn-empezar").style.display = "none"; } });
   });
   PEER.on("error", (e) => {
-    if (e.type === "unavailable-id") { PEER.destroy(); PEER = null; setTimeout(() => abrirDueloShooter(mapaId), 300); }
+    if (e.type === "unavailable-id") { PEER.destroy(); PEER = null; setTimeout(() => abrirDueloShooter(mapaId, SHOOTER_MODO), 300); }
     else mostrarFeedback("Error: " + e.type, "mal");
   });
 }
 
-function empezarDueloShooter(mapaId, duracion, esInvitado) {
+function empezarDueloShooter(mapaId, duracion, esInvitado, modo) {
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
   SHOOTER_DUELO_MAPA = mapaId;
-  if (!esInvitado && CONN) CONN.send({ t: "shooter_start", mapa: mapaId, duracion });
+  if (modo) SHOOTER_MODO = modo;
+  if (!esInvitado && CONN) CONN.send({ t: "shooter_start", mapa: mapaId, duracion, modo: SHOOTER_MODO });
   SHOOTER_DUELO_GEN++;
   const miGen = SHOOTER_DUELO_GEN;
   CARRERA_GEN++; CARRERA_FIN = false;
@@ -3301,7 +3313,11 @@ function montarDueloShooter(mapaId, duracion, miGen) {
   const info = document.createElement("div");
   info.className = "duelo-shooter-info";
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
-  info.textContent = `${mapa.icono} ${mapa.nombre} - ${duracion}s ¡Dispara sin parar!`;
+  info.textContent = SHOOTER_MODO === "torneo"
+    ? `${mapa.icono} ${mapa.nombre} - 🏆 Ronda ${SHOOTER_RONDA} (${SHOOTER_WINS.mio}-${SHOOTER_WINS.rival})`
+    : SHOOTER_MODO === "coop"
+    ? `${mapa.icono} ${mapa.nombre} - 🤝 ¡Juntos a ${SHOOTER_COOP_META} puntos!`
+    : `${mapa.icono} ${mapa.nombre} - ${duracion}s ¡Dispara sin parar!`;
   arena.appendChild(info);
   const zona = document.createElement("div");
   arena.appendChild(zona);
@@ -3350,12 +3366,40 @@ function terminarDueloShooter() {
     arena.innerHTML = "";
     const caja = document.createElement("div");
     caja.className = "caja-resultado";
-    let emoji, titulo;
-    if (PTS_MIO > PTS_RIVAL) { emoji = "🏆"; titulo = `¡Ganaste, ${MI_NOMBRE}!`; }
-    else if (PTS_RIVAL > PTS_MIO) { emoji = "💪"; titulo = `¡Ganó ${RIVAL_NOMBRE}!`; }
-    else { emoji = "🤝"; titulo = "¡Empate!"; }
     const mapa = SHOOTER_MAPAS[SHOOTER_DUELO_MAPA] || SHOOTER_MAPAS.castillo;
-    caja.innerHTML = `
+    let html = "";
+    if (SHOOTER_MODO === "coop") {
+      const equipo = PTS_MIO + PTS_RIVAL;
+      const gano = equipo >= SHOOTER_COOP_META;
+      html = `
+      <div class="emoji-grande">${gano ? "🎉" : "💪"}</div>
+      <h2>${gano ? "¡Meta cumplida juntos!" : "¡Casi lo logran!"}</h2>
+      <p style="color:#9fb4d8;font-size:1.05rem">${mapa.icono} ${mapa.nombre} - Equipo: ${equipo} / ${SHOOTER_COOP_META} (${MI_NOMBRE}: ${PTS_MIO} · ${RIVAL_NOMBRE}: ${PTS_RIVAL})</p>
+      <div class="navegacion">
+        <button class="btn" onclick="revanchaDueloShooter()">🔁 Otra vez</button>
+        <button class="btn secundario" onclick="salirMulti()">🏠 Salir</button>
+      </div>`;
+    } else if (SHOOTER_MODO === "torneo") {
+      let ganadorRonda = null;
+      if (PTS_MIO > PTS_RIVAL) { SHOOTER_WINS.mio++; ganadorRonda = MI_NOMBRE; }
+      else if (PTS_RIVAL > PTS_MIO) { SHOOTER_WINS.rival++; ganadorRonda = RIVAL_NOMBRE; }
+      const campeon = SHOOTER_WINS.mio >= 2 ? MI_NOMBRE : SHOOTER_WINS.rival >= 2 ? RIVAL_NOMBRE : null;
+      html = `
+      <div class="emoji-grande">${campeon ? "🏆" : "⚔️"}</div>
+      <h2>${campeon ? `¡${campeon} campeona del torneo!` : `Ronda ${SHOOTER_RONDA}: ${ganadorRonda ? "ganó " + ganadorRonda : "empate"}`}</h2>
+      <p style="color:#9fb4d8;font-size:1.05rem">${mapa.icono} ${mapa.nombre} - Serie: ${MI_NOMBRE} ${SHOOTER_WINS.mio} · ${SHOOTER_WINS.rival} ${RIVAL_NOMBRE} (ronda: ${MI_NOMBRE} ${PTS_MIO} · ${PTS_RIVAL} ${RIVAL_NOMBRE})</p>
+      <div class="navegacion">
+        ${!campeon && ROL === "host" ? `<button class="btn" onclick="siguienteRondaTorneo()">➡ Siguiente ronda</button>` : ""}
+        ${!campeon && ROL !== "host" ? `<p style="color:#9fb4d8">Esperando al anfitrión...</p>` : ""}
+        ${campeon ? `<button class="btn" onclick="revanchaDueloShooter()">🔁 Nuevo torneo</button>` : ""}
+        <button class="btn secundario" onclick="salirMulti()">🏠 Salir</button>
+      </div>`;
+    } else {
+      let emoji, titulo;
+      if (PTS_MIO > PTS_RIVAL) { emoji = "🏆"; titulo = `¡Ganaste, ${MI_NOMBRE}!`; }
+      else if (PTS_RIVAL > PTS_MIO) { emoji = "💪"; titulo = `¡Ganó ${RIVAL_NOMBRE}!`; }
+      else { emoji = "🤝"; titulo = "¡Empate!"; }
+      html = `
       <div class="emoji-grande">${emoji}</div>
       <h2>${titulo}</h2>
       <p style="color:#9fb4d8;font-size:1.05rem">${mapa.icono} ${mapa.nombre} - ${MI_NOMBRE}: ${PTS_MIO} · ${RIVAL_NOMBRE}: ${PTS_RIVAL}</p>
@@ -3363,14 +3407,24 @@ function terminarDueloShooter() {
         <button class="btn" onclick="revanchaDueloShooter()">🔁 Revancha</button>
         <button class="btn secundario" onclick="salirMulti()">🏠 Salir</button>
       </div>`;
+    }
+    caja.innerHTML = html;
     arena.appendChild(caja);
   }, 400);
 }
 
+function siguienteRondaTorneo() {
+  if (ROL !== "host") return;
+  SHOOTER_RONDA++;
+  if (CONN) CONN.send({ t: "shooter_start", mapa: SHOOTER_DUELO_MAPA, duracion: 40, modo: "torneo" });
+  empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, "torneo");
+}
+
 function revanchaDueloShooter() {
+  SHOOTER_WINS = { mio: 0, rival: 0 }; SHOOTER_RONDA = 1;
   if (ROL === "host") {
     if (CONN) CONN.send({ t: "shooter_revancha" });
-    empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false);
+    empezarDueloShooter(SHOOTER_DUELO_MAPA, 40, false, SHOOTER_MODO);
   } else {
     if (CONN) CONN.send({ t: "shooter_revancha" });
   }
@@ -3968,6 +4022,32 @@ MINIS.pelea.montar = (zona, cfg) => {
   setTimeout(ataqueCPU, 1200);
 };
 
+function shooterUp() { const p = pac(); p.shooterUp = p.shooterUp || { dano: 0, blind: 0, velo: 0 }; return p.shooterUp; }
+function estrellasDisponibles() { return estrellasPaciente() - (pac().gastoEstrellas || 0); }
+const SHOOTER_TIENDA = [
+  { id: "dano", nombre: "Daño", icono: "💥", desc: "Balas que pegan doble", costos: [15, 30, 50] },
+  { id: "blind", nombre: "Blindaje", icono: "❤️", desc: "+1 vida por nivel", costos: [15, 30, 50] },
+  { id: "velo", nombre: "Motor", icono: "👟", desc: "Torre y balas más rápidas", costos: [10, 25, 40] }
+];
+function comprarMejora(id) {
+  const up = shooterUp();
+  const item = SHOOTER_TIENDA.find(t => t.id === id);
+  if (!item || up[id] >= 3) return;
+  const costo = item.costos[up[id]];
+  if (estrellasDisponibles() < costo) { mostrarFeedback("Te faltan ⭐ (cuesta " + costo + ")", "mal"); return; }
+  pac().gastoEstrellas = (pac().gastoEstrellas || 0) + costo;
+  up[id]++;
+  guardar();
+  tono(660, 0.1); setTimeout(() => tono(880, 0.15), 100);
+  mostrarFeedback(`${item.icono} ${item.nombre} nivel ${up[id]}`, "ok");
+  const zona = document.getElementById("zona-mini");
+  if (zona) { zona.innerHTML = ""; MINIS.shooter.montar(zona, {}); }
+}
+let SHOOTER_MODO = "duelo";
+let SHOOTER_RONDA = 1;
+let SHOOTER_WINS = { mio: 0, rival: 0 };
+const SHOOTER_COOP_META = 50;
+
 MINIS.shooter.montar = (zona, cfg) => {
   const gen = MINI_GEN;
   const cb = cfg && cfg.cb;
@@ -3989,12 +4069,40 @@ MINIS.shooter.montar = (zona, cfg) => {
       grid.appendChild(b);
     });
     zona.appendChild(grid);
-    const dueloBtn = document.createElement("button");
-    dueloBtn.className = "btn";
-    dueloBtn.style.cssText = "margin-top:14px;display:block;margin-left:auto;margin-right:auto";
-    dueloBtn.textContent = "⚔️ Duelo 1vs1";
-    dueloBtn.onclick = () => abrirDueloShooter(SHOOTER_MAPA_ACTUAL);
-    zona.appendChild(dueloBtn);
+    const filaModos = document.createElement("div");
+    filaModos.style.cssText = "display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap";
+    [["⚔️ Duelo 1vs1", "duelo"], ["🏆 Torneo", "torneo"], ["🤝 Cooperativo", "coop"]].forEach(([txt, modo]) => {
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.textContent = txt;
+      b.onclick = () => abrirDueloShooter(SHOOTER_MAPA_ACTUAL, modo);
+      filaModos.appendChild(b);
+    });
+    zona.appendChild(filaModos);
+    const tienda = document.createElement("div");
+    tienda.className = "tienda-torre";
+    const up = shooterUp();
+    const disp = estrellasDisponibles();
+    const tTit = document.createElement("div");
+    tTit.style.cssText = "text-align:center;font-weight:800;color:#eef2f7;margin-bottom:4px";
+    tTit.textContent = `🔧 Mejora tu torre (tienes ${disp} ⭐)`;
+    tienda.appendChild(tTit);
+    SHOOTER_TIENDA.forEach(item => {
+      const niv = up[item.id] || 0;
+      const fila = document.createElement("div");
+      fila.className = "tienda-fila";
+      const izq = document.createElement("div");
+      izq.style.cssText = "color:#eef2f7;font-size:0.9rem";
+      izq.innerHTML = `${item.icono} <b>${item.nombre}</b> ${"●".repeat(niv)}${"○".repeat(3 - niv)}<br><span style="color:#9fb4d8;font-size:0.8rem">${item.desc}</span>`;
+      fila.appendChild(izq);
+      const btn = document.createElement("button");
+      btn.className = "btn-comprar";
+      if (niv >= 3) { btn.textContent = "MAX"; btn.disabled = true; }
+      else { btn.textContent = `⭐ ${item.costos[niv]}`; btn.disabled = disp < item.costos[niv]; btn.onclick = () => comprarMejora(item.id); }
+      fila.appendChild(btn);
+      tienda.appendChild(fila);
+    });
+    zona.appendChild(tienda);
     const pre = document.createElement("div");
     pre.style.cssText = "margin-top:10px;font-size:0.9rem;color:#9fb4d8;text-align:center";
     pre.textContent = "Toca un mapa para jugar solo";
@@ -4005,8 +4113,23 @@ MINIS.shooter.montar = (zona, cfg) => {
   const mapaId = cfg?.mapa || SHOOTER_MAPA_ACTUAL;
   const mapa = SHOOTER_MAPAS[mapaId] || SHOOTER_MAPAS.castillo;
   SHOOTER_MAPA_ACTUAL = mapaId;
-  let vidas = 3, puntos = 0, fin = false;
+  const UP = shooterUp();
+  let vidas = 3 + Math.min(2, UP.blind || 0), puntos = 0, fin = false;
+  let oleadaN = 0, jefeSpawn = false, dobleHasta = 0, slowHasta = 0, escudo = false;
+  const danoBala = (UP.dano || 0) >= 2 ? 2 : 1;
+  const easeTorre = 0.16 + 0.06 * (UP.velo || 0);
+  const multVelBala = 1 + 0.08 * (UP.velo || 0);
   const vib = (p) => { if (navigator.vibrate) navigator.vibrate(p); };
+  let arenaEl = null;
+  const avisoShooter = (txt) => {
+    if (!arenaEl || !arenaEl.isConnected) return;
+    const a = document.createElement("div");
+    a.className = "aviso-cpu";
+    a.textContent = txt;
+    a.style.left = "50%"; a.style.transform = "translateX(-50%)"; a.style.top = "56px";
+    arenaEl.appendChild(a);
+    setTimeout(() => a.remove(), 1600);
+  };
   document.getElementById("status-mini").textContent = `${mapa.icono} ${mapa.nombre} · ${mapa.arma.icono} ${mapa.arma.nombre} - Toca para moverte y disparar 👆`;
   const cab = document.createElement("div");
   cab.className = "mini-cabezal";
@@ -4034,6 +4157,7 @@ MINIS.shooter.montar = (zona, cfg) => {
   const arena = document.createElement("div");
   arena.className = "arena-shooter";
   arena.style.background = mapa.fondo;
+  arenaEl = arena;
   arena.appendChild(fondoPintado(mapaId));
   const torre = document.createElement("div");
   torre.className = "torre";
@@ -4090,13 +4214,13 @@ MINIS.shooter.montar = (zona, cfg) => {
     arena.appendChild(e);
     setTimeout(() => e.remove(), 400);
   };
-  const spawn = () => {
+  const spawn = (fx) => {
     if (fin || gen !== MINI_GEN) return;
     const tanque = Math.random() < 0.22;
     const en = document.createElement("div");
     en.className = "enemigo" + (tanque ? " tanque" : "");
     en.textContent = tanque ? mapa.tanque : mapa.enemigos[Math.floor(Math.random() * mapa.enemigos.length)];
-    const x0 = 20 + Math.random() * (Math.max(arena.clientWidth, 320) - 60);
+    const x0 = fx != null ? fx : 20 + Math.random() * (Math.max(arena.clientWidth, 320) - 60);
     en.style.left = x0 + "px";
     en.style.top = "-40px";
     arena.appendChild(en);
@@ -4106,6 +4230,64 @@ MINIS.shooter.montar = (zona, cfg) => {
     if (gen !== MINI_GEN) { clearInterval(spawnLoop); return; }
     spawn();
   }, 420);
+  const spawnPower = () => {
+    if (fin || gen !== MINI_GEN) return;
+    const tipos = ["⭐", "🛡️", "🐌", "💣"];
+    const tipo = tipos[Math.floor(Math.random() * tipos.length)];
+    const en = document.createElement("div");
+    en.className = "enemigo powerup";
+    en.textContent = tipo;
+    const x0 = 30 + Math.random() * (Math.max(arena.clientWidth, 320) - 70);
+    en.style.left = x0 + "px";
+    en.style.top = "-40px";
+    arena.appendChild(en);
+    enemigos.push({ el: en, x: x0, y: -40, amp: 12, vel: 1.2, fase: 0, hp: 1, power: tipo });
+  };
+  const powerLoop = setInterval(() => {
+    if (gen !== MINI_GEN) { clearInterval(powerLoop); return; }
+    if (!fin && Math.random() < 0.7) spawnPower();
+  }, 11000);
+  const oleadaLoop = setInterval(() => {
+    if (gen !== MINI_GEN) { clearInterval(oleadaLoop); return; }
+    if (fin) return;
+    oleadaN++;
+    const n = 3 + Math.min(oleadaN, 4);
+    const w = Math.max(arena.clientWidth, 320);
+    avisoShooter(`¡Oleada ${oleadaN}!`);
+    tono(440, 0.12, "square", 0.1);
+    for (let i = 0; i < n; i++) setTimeout(() => spawn((w * (i + 1)) / (n + 1)), i * 260);
+  }, 12000);
+  const spawnJefe = () => {
+    const en = document.createElement("div");
+    en.className = "enemigo tanque";
+    en.textContent = mapa.tanque;
+    en.style.fontSize = "3.2rem";
+    const x0 = Math.max(arena.clientWidth, 320) / 2;
+    en.style.left = x0 + "px";
+    en.style.top = "-60px";
+    arena.appendChild(en);
+    enemigos.push({ el: en, x: x0, y: -60, amp: 70, vel: 0.9, fase: 0, hp: 8, tanque: true, jefe: true });
+  };
+  const aplicarPower = (tipo, x, y) => {
+    if (tipo === "⭐") { dobleHasta = Date.now() + 8000; popup(x, y, "¡Doble tiro!"); }
+    else if (tipo === "🛡️") { escudo = true; popup(x, y, "¡Escudo!"); }
+    else if (tipo === "🐌") { slowHasta = Date.now() + 6000; popup(x, y, "¡Lento!"); }
+    else if (tipo === "💣") {
+      popup(x, y, "¡BOMBA!");
+      for (let i = enemigos.length - 1; i >= 0; i--) {
+        const e2 = enemigos[i];
+        if (e2.power) continue;
+        explotar(e2.x, e2.y);
+        e2.el.remove();
+        puntos += e2.jefe ? 10 : e2.tanque ? 3 : 1;
+        enemigos.splice(i, 1);
+      }
+      MINI_PUNTOS = puntos;
+      document.getElementById("mini-shooter-pts").textContent = "Puntos: " + puntos;
+    }
+    tono(660, 0.1); setTimeout(() => tono(990, 0.15), 100);
+    vib(40);
+  };
   let torreX = null, objetivoX = null;
   const disparar = (ex, ey) => {
     if (fin || gen !== MINI_GEN) return;
@@ -4120,52 +4302,70 @@ MINIS.shooter.montar = (zona, cfg) => {
     arena.appendChild(fog);
     setTimeout(() => fog.remove(), 200);
     const tamBala = mapa.balaTam || 10;
-    const p = document.createElement("div");
-    p.className = "proyectil";
-    p.style.width = tamBala + "px"; p.style.height = tamBala + "px";
-    p.style.background = mapa.bala || "#ffd54f";
-    p.style.boxShadow = `0 0 8px ${mapa.bala || "#ffd54f"}`;
-    p.style.left = (tx - tamBala / 2) + "px"; p.style.top = (ty - tamBala / 2) + "px";
-    arena.appendChild(p);
     tono(900, 0.06);
     vib(15);
     const dist = Math.hypot(dx, dy) || 1;
-    const velBala = mapa.velBala || 12;
-    const vx = dx / dist * velBala, vy = dy / dist * velBala;
-    let x = tx, y = ty;
-    const rafP = () => {
-      if (gen !== MINI_GEN) { p.remove(); return; }
-      x += vx; y += vy;
-      p.style.left = (x - tamBala / 2) + "px"; p.style.top = (y - tamBala / 2) + "px";
-      let hit = false;
-      for (let i = 0; i < enemigos.length; i++) {
-        const en = enemigos[i];
-        if (Math.abs(en.x - x) < 22 && Math.abs(en.y - y) < 22) {
-          hit = true;
-          en.hp--;
-          if (en.hp <= 0) {
-            explotar(en.x, en.y);
-            en.el.remove();
-            enemigos.splice(i, 1);
-            const pts = en.tanque ? 3 : 1;
-            puntos += pts; MINI_PUNTOS = puntos;
-            popup(en.x, en.y, "+" + pts);
-            document.getElementById("mini-shooter-pts").textContent = "Puntos: " + puntos;
-            tono(700 + Math.random() * 300, 0.08);
-            vib(25);
-            if (cb) { /* en versus avisa puntos al rival */ }
-          } else {
-            tono(400, 0.05, "square", 0.08);
-            en.el.style.transform = "scale(1.25)";
-            setTimeout(() => { if (en.el.isConnected) en.el.style.transform = ""; }, 120);
+    const velBala = (mapa.velBala || 12) * multVelBala;
+    const lanzar = (vx0, vy0) => {
+      const pb = document.createElement("div");
+      pb.className = "proyectil";
+      pb.style.width = tamBala + "px"; pb.style.height = tamBala + "px";
+      pb.style.background = mapa.bala || "#ffd54f";
+      pb.style.boxShadow = `0 0 8px ${mapa.bala || "#ffd54f"}`;
+      pb.style.left = (tx - tamBala / 2) + "px"; pb.style.top = (ty - tamBala / 2) + "px";
+      arena.appendChild(pb);
+      let x = tx, y = ty;
+      const paso = () => {
+        if (gen !== MINI_GEN) { pb.remove(); return; }
+        x += vx0; y += vy0;
+        pb.style.left = (x - tamBala / 2) + "px"; pb.style.top = (y - tamBala / 2) + "px";
+        let hit = false;
+        for (let i = 0; i < enemigos.length; i++) {
+          const en = enemigos[i];
+          if (Math.abs(en.x - x) < 22 && Math.abs(en.y - y) < 22) {
+            hit = true;
+            if (en.power) {
+              aplicarPower(en.power, en.x, en.y);
+              en.el.remove();
+              enemigos.splice(i, 1);
+              break;
+            }
+            en.hp -= danoBala;
+            if (en.hp <= 0) {
+              explotar(en.x, en.y);
+              en.el.remove();
+              enemigos.splice(i, 1);
+              const pts = en.jefe ? 10 : en.tanque ? 3 : 1;
+              puntos += pts; MINI_PUNTOS = puntos;
+              popup(en.x, en.y, en.jefe ? "+10 ¡JEFE!" : "+" + pts);
+              document.getElementById("mini-shooter-pts").textContent = "Puntos: " + puntos;
+              tono(700 + Math.random() * 300, 0.08);
+              vib(25);
+              if (cb) { /* en versus avisa puntos al rival */ }
+              if (!jefeSpawn && puntos >= 12) {
+                jefeSpawn = true;
+                avisoShooter("⚠️ ¡JEFE!");
+                tono(220, 0.25, "sawtooth", 0.14);
+                spawnJefe();
+              }
+            } else {
+              tono(400, 0.05, "square", 0.08);
+              en.el.style.transform = "scale(1.25)";
+              setTimeout(() => { if (en.el.isConnected) en.el.style.transform = ""; }, 120);
+            }
+            break;
           }
-          break;
         }
-      }
-      if (hit || x < -20 || x > arena.clientWidth + 20 || y < -30 || y > arena.clientHeight + 20) p.remove();
-      else requestAnimationFrame(rafP);
+        if (hit || x < -20 || x > arena.clientWidth + 20 || y < -30 || y > arena.clientHeight + 20) pb.remove();
+        else requestAnimationFrame(paso);
+      };
+      requestAnimationFrame(paso);
     };
-    requestAnimationFrame(rafP);
+    lanzar(dx / dist * velBala, dy / dist * velBala);
+    if (Date.now() < dobleHasta) {
+      const a2 = Math.atan2(dy, dx) + 0.14;
+      lanzar(Math.cos(a2) * velBala, Math.sin(a2) * velBala);
+    }
   };
   arena.addEventListener("pointerdown", (ev) => {
     const r = arena.getBoundingClientRect();
@@ -4177,21 +4377,28 @@ MINIS.shooter.montar = (zona, cfg) => {
     if (gen !== MINI_GEN || fin) return;
     if (torreX == null) { torreX = Math.max(arena.clientWidth, 320) / 2; objetivoX = torreX; }
     if (objetivoX != null && Math.abs(objetivoX - torreX) > 1) {
-      torreX += (objetivoX - torreX) * 0.18;
+      torreX += (objetivoX - torreX) * easeTorre;
       torre.style.left = torreX + "px";
     }
+    const lento = Date.now() < slowHasta;
     for (const en of enemigos) {
-      en.y += en.vel;
+      en.y += en.vel * (lento ? 0.5 : 1);
       en.fase += 0.08;
       en.el.style.left = (en.x + Math.sin(en.fase) * en.amp) + "px";
       en.el.style.top = en.y + "px";
       if (en.y > arena.clientHeight - 44) {
         en.el.remove();
-        vidas--;
-        rellenoVida.style.width = (vidas / 3 * 100) + "%";
-        tono(180, 0.2, "triangle", 0.12);
-        vib(60);
-        sacudirArena();
+        if (escudo) {
+          escudo = false;
+          popup(en.x, arena.clientHeight - 80, "¡Escudo te salvó!");
+          tono(520, 0.12, "square", 0.1);
+        } else {
+          vidas--;
+          rellenoVida.style.width = (vidas / 3 * 100) + "%";
+          tono(180, 0.2, "triangle", 0.12);
+          vib(60);
+          sacudirArena();
+        }
         if (vidas <= 0) { fin = true; MINI_PUNTOS = puntos; if (cb) { cb(MINI_PUNTOS); return; } miniTermino(`El fuerte cayó ${mapa.icono}`, 0); return; }
       }
     }
